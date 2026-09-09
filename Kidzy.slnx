@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Kidzy.Api/Kidzy.Api.csproj" />
+  <Project Path="Kidzy.Application/Kidzy.Application.csproj" />
+  <Project Path="Kidzy.Domain/Kidzy.Domain.csproj" Id="bd2ec1b1-d789-48d3-b88b-681603171c79" />
+  <Project Path="Kidzy.Infrastructure/Kidzy.Infrastructure.csproj" Id="4c7d3a25-e2fc-40ec-a0be-76073e962fe1" />
+</Solution>
