@@ -1,9 +1,11 @@
 ﻿using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Application.Services;
+
 using Kidzy.Infrastructure.Data;
 using Kidzy.Infrastructure.Repositories;
 using Kidzy.Infrastructure.Services;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Kidzy.Api.Extensions
@@ -13,7 +15,11 @@ namespace Kidzy.Api.Extensions
         public static IServiceCollection AddApplicationServices(
             this IServiceCollection services)
         {
+            // Auth
             services.AddScoped<IAuthService, AuthService>();
+
+            // Category
+            services.AddScoped<ICategoryService, CategoryService>();
 
             return services;
         }
@@ -22,16 +28,31 @@ namespace Kidzy.Api.Extensions
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            services.AddDbContext<KidzyDbContext>(options =>
-                options.UseSqlServer(
-                    configuration.GetConnectionString(
-                        "DefaultConnection")));
+            services.AddDbContext<KidzyDbContext>(
+                options =>
+                    options.UseSqlServer(
+                        configuration.GetConnectionString(
+                            "DefaultConnection")));
 
-            services.AddScoped<IUserRepository, UserRepository>();
+            // User
+            services.AddScoped<
+                IUserRepository,
+                UserRepository>();
 
-            services.AddScoped<IPasswordHasher, PasswordHasher>();
+            // Category
+            services.AddScoped<
+                ICategoryRepository,
+                CategoryRepository>();
 
-            services.AddScoped<IJwtService, JwtService>();
+            // Password
+            services.AddScoped<
+                IPasswordHasher,
+                PasswordHasher>();
+
+            // JWT
+            services.AddScoped<
+                IJwtService,
+                JwtService>();
 
             return services;
         }
