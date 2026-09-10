@@ -1,6 +1,7 @@
 ﻿using Kidzy.Application.DTOs.Category;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
+using Kidzy.Domain.Entities;
 
 namespace Kidzy.Application.Services
 {
@@ -23,6 +24,7 @@ namespace Kidzy.Application.Services
             {
                 Id = c.Id,
                 Name = c.Name
+
             }).ToList();
         }
 
@@ -41,6 +43,29 @@ namespace Kidzy.Application.Services
                 Id = category.Id,
                 Name = category.Name
             };
+        }
+
+        public async Task<CategoryResponseDto> CreateAsync(
+            CategoryCreateDto dto)
+        {
+            var category = new Category
+            {
+                Name = dto.Name
+            };
+
+            var createdCategory =
+                await _categoryRepository.CreateAsync(category);
+
+            return new CategoryResponseDto
+            {
+                Id = createdCategory.Id,
+                Name = createdCategory.Name
+            };
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            return await _categoryRepository.DeleteAsync(id);
         }
     }
 }
