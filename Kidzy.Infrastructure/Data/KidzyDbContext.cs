@@ -23,10 +23,12 @@ namespace Kidzy.Infrastructure.Data
 
         public DbSet<CartItem> CartItems { get; set; }
 
-        // Wishlist
         public DbSet<Wishlist> Wishlists { get; set; }
 
         public DbSet<WishlistItem> WishlistItems { get; set; }
+        public DbSet<Order> Orders { get; set; }
+
+        public DbSet<OrderItem> OrderItems { get; set; }
 
 
         protected override void OnModelCreating(
@@ -111,6 +113,46 @@ namespace Kidzy.Infrastructure.Data
                     wi.ProductId
                 })
                 .IsUnique();
+            // User → Orders
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.User)
+                .WithMany()
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // Order → OrderItems
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.OrderItems)
+                .WithOne(oi => oi.Order)
+                .HasForeignKey(oi => oi.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // Product → OrderItems
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.Product)
+                .WithMany()
+                .HasForeignKey(oi => oi.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // Order TotalPrice
+            modelBuilder.Entity<Order>()
+                .Property(o => o.TotalPrice)
+                .HasPrecision(18, 2);
+
+
+            // OrderItem UnitPrice
+            modelBuilder.Entity<OrderItem>()
+                .Property(oi => oi.UnitPrice)
+                .HasPrecision(18, 2);
+
+
+            // OrderItem SubTotal
+            modelBuilder.Entity<OrderItem>()
+                .Property(oi => oi.SubTotal)
+                .HasPrecision(18, 2);
         }
     }
 }

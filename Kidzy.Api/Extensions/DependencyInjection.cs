@@ -10,9 +10,6 @@ namespace Kidzy.Api.Extensions
 {
     public static class DependencyInjection
     {
-        // APPLICATION SERVICES
-        
-
         public static IServiceCollection AddApplicationServices(
             this IServiceCollection services)
         {
@@ -31,11 +28,12 @@ namespace Kidzy.Api.Extensions
             // Wishlist
             services.AddScoped<IWishlistService, WishlistService>();
 
+            // Order
+            services.AddScoped<IOrderService, OrderService>();
+
             return services;
         }
 
-
-        // INFRASTRUCTURE SERVICES
 
         public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services,
@@ -48,8 +46,6 @@ namespace Kidzy.Api.Extensions
                         configuration.GetConnectionString(
                             "DefaultConnection")));
 
-
-            // REPOSITORIES
 
             // User Repository
             services.AddScoped<
@@ -76,8 +72,11 @@ namespace Kidzy.Api.Extensions
                 IWishlistRepository,
                 WishlistRepository>();
 
+            // Order Repository
+            services.AddScoped<
+                IOrderRepository,
+                OrderRepository>();
 
-            // INFRASTRUCTURE SERVICES
 
             // Password Hasher
             services.AddScoped<
@@ -88,7 +87,6 @@ namespace Kidzy.Api.Extensions
             services.AddScoped<
                 IJwtService,
                 JwtService>();
-
 
             return services;
         }
