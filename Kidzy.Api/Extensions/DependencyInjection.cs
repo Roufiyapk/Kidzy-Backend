@@ -4,13 +4,13 @@ using Kidzy.Application.Services;
 using Kidzy.Infrastructure.Data;
 using Kidzy.Infrastructure.Repositories;
 using Kidzy.Infrastructure.Services;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kidzy.Api.Extensions
 {
     public static class DependencyInjection
     {
-        // Application Services
         public static IServiceCollection AddApplicationServices(
             this IServiceCollection services)
         {
@@ -23,10 +23,12 @@ namespace Kidzy.Api.Extensions
             // Product
             services.AddScoped<IProductService, ProductService>();
 
+            // Cart
+            services.AddScoped<ICartService, CartService>();
+
             return services;
         }
 
-        // Infrastructure Services
         public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services,
             IConfiguration configuration)
@@ -47,10 +49,13 @@ namespace Kidzy.Api.Extensions
             // Product Repository
             services.AddScoped<IProductRepository, ProductRepository>();
 
+            // Cart Repository
+            services.AddScoped<ICartRepository, CartRepository>();
+
             // Password Hasher
             services.AddScoped<IPasswordHasher, PasswordHasher>();
 
-            // JWT Service
+            // JWT
             services.AddScoped<IJwtService, JwtService>();
 
             return services;

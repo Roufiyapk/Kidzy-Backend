@@ -19,6 +19,10 @@ namespace Kidzy.Infrastructure.Data
 
         public DbSet<ProductSize> ProductSizes { get; set; }
 
+        public DbSet<Cart> Carts { get; set; }
+
+        public DbSet<CartItem> CartItems { get; set; }
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
@@ -42,6 +46,42 @@ namespace Kidzy.Infrastructure.Data
                 .WithOne(ps => ps.Product)
                 .HasForeignKey(ps => ps.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // User → Cart
+            modelBuilder.Entity<User>()
+                .HasOne<Cart>()
+                .WithOne(c => c.User)
+                .HasForeignKey<Cart>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One Cart per User
+            modelBuilder.Entity<Cart>()
+                .HasIndex(c => c.UserId)
+                .IsUnique();
+
+            // Cart → CartItems
+            modelBuilder.Entity<Cart>()
+                .HasMany(c => c.CartItems)
+                .WithOne(ci => ci.Cart)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Product → CartItems
+            modelBuilder.Entity<Product>()
+                .HasMany<CartItem>()
+                .WithOne(ci => ci.Product)
+                .HasForeignKey(ci => ci.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Prevent duplicate Product + Size in same cart
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(ci => new
+                {
+                    ci.CartId,
+                    ci.ProductId,
+                    ci.SelectedSize
+                })
+                .IsUnique();
         }
     }
 }
