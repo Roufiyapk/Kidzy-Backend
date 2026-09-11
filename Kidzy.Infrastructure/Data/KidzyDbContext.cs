@@ -23,15 +23,23 @@ namespace Kidzy.Infrastructure.Data
 
         public DbSet<CartItem> CartItems { get; set; }
 
+        // Wishlist
+        public DbSet<Wishlist> Wishlists { get; set; }
+
+        public DbSet<WishlistItem> WishlistItems { get; set; }
+
+
         protected override void OnModelCreating(
             ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+
             // Product Price
             modelBuilder.Entity<Product>()
                 .Property(p => p.Price)
                 .HasPrecision(18, 2);
+
 
             // Category → Products
             modelBuilder.Entity<Category>()
@@ -40,6 +48,7 @@ namespace Kidzy.Infrastructure.Data
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+
             // Product → ProductSizes
             modelBuilder.Entity<Product>()
                 .HasMany(p => p.ProductSizes)
@@ -47,17 +56,6 @@ namespace Kidzy.Infrastructure.Data
                 .HasForeignKey(ps => ps.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // User → Cart
-            modelBuilder.Entity<User>()
-                .HasOne<Cart>()
-                .WithOne(c => c.User)
-                .HasForeignKey<Cart>(c => c.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // One Cart per User
-            modelBuilder.Entity<Cart>()
-                .HasIndex(c => c.UserId)
-                .IsUnique();
 
             // Cart → CartItems
             modelBuilder.Entity<Cart>()
@@ -66,20 +64,51 @@ namespace Kidzy.Infrastructure.Data
                 .HasForeignKey(ci => ci.CartId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Product → CartItems
-            modelBuilder.Entity<Product>()
-                .HasMany<CartItem>()
-                .WithOne(ci => ci.Product)
-                .HasForeignKey(ci => ci.ProductId)
+
+            // User → Cart
+            modelBuilder.Entity<Cart>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Prevent duplicate Product + Size in same cart
-            modelBuilder.Entity<CartItem>()
-                .HasIndex(ci => new
+
+            // Wishlist → WishlistItems
+            modelBuilder.Entity<Wishlist>()
+                .HasMany(w => w.WishlistItems)
+                .WithOne(wi => wi.Wishlist)
+                .HasForeignKey(wi => wi.WishlistId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // User → Wishlist
+            modelBuilder.Entity<Wishlist>()
+                .HasOne(w => w.User)
+                .WithMany()
+                .HasForeignKey(w => w.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // Product → WishlistItems
+            modelBuilder.Entity<WishlistItem>()
+                .HasOne(wi => wi.Product)
+                .WithMany()
+                .HasForeignKey(wi => wi.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // One wishlist per user
+            modelBuilder.Entity<Wishlist>()
+                .HasIndex(w => w.UserId)
+                .IsUnique();
+
+
+            // Same product should not be added twice
+            modelBuilder.Entity<WishlistItem>()
+                .HasIndex(wi => new
                 {
-                    ci.CartId,
-                    ci.ProductId,
-                    ci.SelectedSize
+                    wi.WishlistId,
+                    wi.ProductId
                 })
                 .IsUnique();
         }

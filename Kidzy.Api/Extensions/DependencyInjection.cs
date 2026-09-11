@@ -4,13 +4,15 @@ using Kidzy.Application.Services;
 using Kidzy.Infrastructure.Data;
 using Kidzy.Infrastructure.Repositories;
 using Kidzy.Infrastructure.Services;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kidzy.Api.Extensions
 {
     public static class DependencyInjection
     {
+        // APPLICATION SERVICES
+        
+
         public static IServiceCollection AddApplicationServices(
             this IServiceCollection services)
         {
@@ -26,8 +28,14 @@ namespace Kidzy.Api.Extensions
             // Cart
             services.AddScoped<ICartService, CartService>();
 
+            // Wishlist
+            services.AddScoped<IWishlistService, WishlistService>();
+
             return services;
         }
+
+
+        // INFRASTRUCTURE SERVICES
 
         public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services,
@@ -40,23 +48,47 @@ namespace Kidzy.Api.Extensions
                         configuration.GetConnectionString(
                             "DefaultConnection")));
 
+
+            // REPOSITORIES
+
             // User Repository
-            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<
+                IUserRepository,
+                UserRepository>();
 
             // Category Repository
-            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<
+                ICategoryRepository,
+                CategoryRepository>();
 
             // Product Repository
-            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<
+                IProductRepository,
+                ProductRepository>();
 
             // Cart Repository
-            services.AddScoped<ICartRepository, CartRepository>();
+            services.AddScoped<
+                ICartRepository,
+                CartRepository>();
+
+            // Wishlist Repository
+            services.AddScoped<
+                IWishlistRepository,
+                WishlistRepository>();
+
+
+            // INFRASTRUCTURE SERVICES
 
             // Password Hasher
-            services.AddScoped<IPasswordHasher, PasswordHasher>();
+            services.AddScoped<
+                IPasswordHasher,
+                PasswordHasher>();
 
-            // JWT
-            services.AddScoped<IJwtService, JwtService>();
+            // JWT Service
+            services.AddScoped<
+                IJwtService,
+                JwtService>();
+
 
             return services;
         }
