@@ -13,27 +13,17 @@ namespace Kidzy.Api.Extensions
         public static IServiceCollection AddApplicationServices(
             this IServiceCollection services)
         {
-            // Auth
+            // Application Services
             services.AddScoped<IAuthService, AuthService>();
-
-            // Category
             services.AddScoped<ICategoryService, CategoryService>();
-
-            // Product
             services.AddScoped<IProductService, ProductService>();
-
-            // Cart
             services.AddScoped<ICartService, CartService>();
-
-            // Wishlist
             services.AddScoped<IWishlistService, WishlistService>();
-
-            // Order
             services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<ICheckoutService, CheckoutService>();
 
             return services;
         }
-
 
         public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services,
@@ -46,47 +36,17 @@ namespace Kidzy.Api.Extensions
                         configuration.GetConnectionString(
                             "DefaultConnection")));
 
+            // Repositories
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICartRepository, CartRepository>();
+            services.AddScoped<IWishlistRepository, WishlistRepository>();
+            services.AddScoped<IOrderRepository, OrderRepository>();
 
-            // User Repository
-            services.AddScoped<
-                IUserRepository,
-                UserRepository>();
-
-            // Category Repository
-            services.AddScoped<
-                ICategoryRepository,
-                CategoryRepository>();
-
-            // Product Repository
-            services.AddScoped<
-                IProductRepository,
-                ProductRepository>();
-
-            // Cart Repository
-            services.AddScoped<
-                ICartRepository,
-                CartRepository>();
-
-            // Wishlist Repository
-            services.AddScoped<
-                IWishlistRepository,
-                WishlistRepository>();
-
-            // Order Repository
-            services.AddScoped<
-                IOrderRepository,
-                OrderRepository>();
-
-
-            // Password Hasher
-            services.AddScoped<
-                IPasswordHasher,
-                PasswordHasher>();
-
-            // JWT Service
-            services.AddScoped<
-                IJwtService,
-                JwtService>();
+            // Infrastructure Services
+            services.AddScoped<IPasswordHasher, PasswordHasher>();
+            services.AddScoped<IJwtService, JwtService>();
 
             return services;
         }
