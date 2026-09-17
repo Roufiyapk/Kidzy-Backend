@@ -9,8 +9,7 @@ namespace Kidzy.Infrastructure.Repositories
     {
         private readonly KidzyDbContext _context;
 
-        public OrderRepository(
-            KidzyDbContext context)
+        public OrderRepository(KidzyDbContext context)
         {
             _context = context;
         }
@@ -33,17 +32,6 @@ namespace Kidzy.Infrastructure.Repositories
                 .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
-        }
-
-        public async Task<Order?> GetByIdAsync(
-            int orderId,
-            int userId)
-        {
-            return await _context.Orders
-                .Include(o => o.OrderItems)
-                .FirstOrDefaultAsync(o =>
-                    o.Id == orderId &&
-                    o.UserId == userId);
         }
     }
 }

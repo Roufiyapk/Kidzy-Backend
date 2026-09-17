@@ -11,5 +11,7 @@ namespace Kidzy.Application.Interfaces.Repositories
         Task<Product> CreateAsync(Product product);
 
         Task<bool> DeleteAsync(int id);
+
+        Task UpdateProductSizeAsync(ProductSize productSize);
     }
 }

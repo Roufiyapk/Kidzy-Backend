@@ -1,16 +1,11 @@
-﻿using Kidzy.Application.DTOs.Category;
+﻿using Kidzy.Domain.Entities;
 
 namespace Kidzy.Application.Interfaces.Services
 {
     public interface ICategoryService
     {
-        Task<List<CategoryResponseDto>> GetAllAsync();
+        Task<List<Category>> GetAllAsync();
 
-        Task<CategoryResponseDto?> GetByIdAsync(int id);
-
-        Task<CategoryResponseDto> CreateAsync(
-            CategoryCreateDto dto);
-
-        Task<bool> DeleteAsync(int id);
+        Task<Category?> GetByIdAsync(int id);
     }
 }

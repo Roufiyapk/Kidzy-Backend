@@ -14,14 +14,13 @@
 
         public string Phone { get; set; } = string.Empty;
 
-        public string PaymentMethod { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = "COD";
 
         public string PaymentStatus { get; set; } = "Pending";
 
         public string Status { get; set; } = "Pending";
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
 
         public User User { get; set; } = null!;
 

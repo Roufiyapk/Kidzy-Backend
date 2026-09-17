@@ -10,7 +10,6 @@
 
         public int Stock { get; set; }
 
-        // Product relationship
         public Product Product { get; set; } = null!;
     }
 }

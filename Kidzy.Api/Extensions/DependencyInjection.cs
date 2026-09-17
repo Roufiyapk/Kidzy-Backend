@@ -10,42 +10,64 @@ namespace Kidzy.Api.Extensions
 {
     public static class DependencyInjection
     {
+        // APPLICATION SERVICES
+
         public static IServiceCollection AddApplicationServices(
             this IServiceCollection services)
         {
-            // Application Services
             services.AddScoped<IAuthService, AuthService>();
+
             services.AddScoped<ICategoryService, CategoryService>();
+
             services.AddScoped<IProductService, ProductService>();
+
             services.AddScoped<ICartService, CartService>();
+
             services.AddScoped<IWishlistService, WishlistService>();
+
             services.AddScoped<IOrderService, OrderService>();
+
+            // Checkout Service
             services.AddScoped<ICheckoutService, CheckoutService>();
 
             return services;
         }
 
+
+        // INFRASTRUCTURE SERVICES
+
         public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            // Database
+            // DATABASE
+
             services.AddDbContext<KidzyDbContext>(
                 options =>
                     options.UseSqlServer(
                         configuration.GetConnectionString(
                             "DefaultConnection")));
 
-            // Repositories
+
+            // REPOSITORIES
+
             services.AddScoped<IUserRepository, UserRepository>();
+
             services.AddScoped<ICategoryRepository, CategoryRepository>();
+
             services.AddScoped<IProductRepository, ProductRepository>();
+
             services.AddScoped<ICartRepository, CartRepository>();
+
             services.AddScoped<IWishlistRepository, WishlistRepository>();
+
             services.AddScoped<IOrderRepository, OrderRepository>();
 
-            // Infrastructure Services
+
+            // INFRASTRUCTURE SERVICES
+
             services.AddScoped<IPasswordHasher, PasswordHasher>();
+
             services.AddScoped<IJwtService, JwtService>();
 
             return services;

@@ -8,5 +8,9 @@ namespace Kidzy.Application.Interfaces.Services
         Task<OrderResponseDto?> CheckoutAsync(
             int userId,
             CheckoutDto dto);
+
+        Task<OrderResponseDto?> BuyNowAsync(
+            int userId,
+            BuyNowDto dto);
     }
 }

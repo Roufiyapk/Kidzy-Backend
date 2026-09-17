@@ -30,7 +30,6 @@ namespace Kidzy.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        // CREATE PRODUCT
         public async Task<Product> CreateAsync(Product product)
         {
             _context.Products.Add(product);
@@ -40,11 +39,11 @@ namespace Kidzy.Infrastructure.Repositories
             return product;
         }
 
-        // DELETE PRODUCT
         public async Task<bool> DeleteAsync(int id)
         {
-            var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == id);
+            var product =
+                await _context.Products
+                    .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
             {
@@ -56,6 +55,14 @@ namespace Kidzy.Infrastructure.Repositories
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task UpdateProductSizeAsync(
+            ProductSize productSize)
+        {
+            _context.ProductSizes.Update(productSize);
+
+            await _context.SaveChangesAsync();
         }
     }
 }

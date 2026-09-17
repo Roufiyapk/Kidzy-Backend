@@ -23,6 +23,6 @@
         public DateTime CreatedAt { get; set; }
 
         public List<OrderItemResponseDto> Items { get; set; }
-            = new List<OrderItemResponseDto>();
+            = new();
     }
 }
