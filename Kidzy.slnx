@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Kidzy.API/Kidzy.API.csproj" />
+  <Project Path="Kidzy.Application/Kidzy.Application.csproj" />
+  <Project Path="Kidzy.Domain/Kidzy.Domain.csproj" />
+  <Project Path="Kidzy.Infrastructure/Kidzy.Infrastructure.csproj" />
+</Solution>
