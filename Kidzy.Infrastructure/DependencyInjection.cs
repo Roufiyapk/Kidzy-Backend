@@ -4,6 +4,7 @@ using Kidzy.Application.Interfaces.Services;
 using Kidzy.Application.Services;
 using Kidzy.Infrastructure.Authentication;
 using Kidzy.Infrastructure.Data;
+using Kidzy.Infrastructure.Data.Seed;
 using Kidzy.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,16 +18,19 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Database
         services.AddDbContext<ApplicationDbContext>(
             options =>
                 options.UseSqlServer(
                     configuration.GetConnectionString(
                         "DefaultConnection")));
 
+        // Repositories
         services.AddScoped<
             IUserRepository,
             UserRepository>();
 
+        // Authentication
         services.AddScoped<
             IPasswordHasher,
             PasswordHasher>();
@@ -35,6 +39,7 @@ public static class DependencyInjection
             IJwtService,
             JwtService>();
 
+        // Application Services
         services.AddScoped<
             IAuthService,
             AuthService>();
@@ -42,6 +47,9 @@ public static class DependencyInjection
         services.AddScoped<
             IAdminService,
             AdminService>();
+
+        // Seed
+        services.AddScoped<AdminSeeder>();
 
         return services;
     }

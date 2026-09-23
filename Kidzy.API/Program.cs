@@ -1,6 +1,7 @@
 using Kidzy.API.Extensions;
 using Kidzy.Infrastructure;
 using Kidzy.Infrastructure.Data;
+using Kidzy.Infrastructure.Data.Seed;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
@@ -27,10 +28,15 @@ builder.Services.AddSwaggerGen(options =>
         new OpenApiSecurityScheme
         {
             Name = "Authorization",
+
             Type = SecuritySchemeType.Http,
+
             Scheme = "bearer",
+
             BearerFormat = "JWT",
+
             In = ParameterLocation.Header,
+
             Description =
                 "Enter your JWT token. Example: Bearer eyJ..."
         });
@@ -48,24 +54,33 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Apply migrations and create Admin
+
+// Apply migrations and seed Admin
 using (var scope = app.Services.CreateScope())
 {
+    // Get DbContext
     var dbContext =
         scope.ServiceProvider
             .GetRequiredService<ApplicationDbContext>();
 
-    // Create/update database using migrations
+    // Apply migrations
     await dbContext.Database.MigrateAsync();
 
-    // Create Admin automatically
-    await dbContext.SeedAdminAsync();
+    // Get AdminSeeder
+    var adminSeeder =
+        scope.ServiceProvider
+            .GetRequiredService<AdminSeeder>();
+
+    // Create Admin if it doesn't exist
+    await adminSeeder.SeedAsync();
 }
+
 
 // Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+
     app.UseSwaggerUI();
 }
 
