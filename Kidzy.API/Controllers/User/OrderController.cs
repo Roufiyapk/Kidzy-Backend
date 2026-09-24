@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Security.Claims;
+using FluentValidation;
 using Kidzy.API.Contracts;
 using Kidzy.Application.DTOs.Orders;
 using Kidzy.Application.Interfaces.Services;
@@ -11,150 +12,257 @@ namespace Kidzy.API.Controllers.User;
 [ApiController]
 [Route("api/orders")]
 [Authorize]
-public class OrderController : ControllerBase
+public class OrderController
+    : ControllerBase
 {
     private readonly IOrderService _orderService;
 
+    private readonly IValidator<CreateOrderDto>
+        _createOrderValidator;
+
+    private readonly IValidator<BuyNowOrderDto>
+        _buyNowOrderValidator;
+
     public OrderController(
-        IOrderService orderService)
+        IOrderService orderService,
+        IValidator<CreateOrderDto> createOrderValidator,
+        IValidator<BuyNowOrderDto> buyNowOrderValidator)
     {
-        _orderService = orderService;
+        _orderService =
+            orderService;
+
+        _createOrderValidator =
+            createOrderValidator;
+
+        _buyNowOrderValidator =
+            buyNowOrderValidator;
     }
 
 
-    // ORDER FROM CART
-
+    // CART
+    
     [HttpPost("cart")]
-    public async Task<IActionResult> CreateFromCart(
-        [FromBody] CreateOrderDto dto)
+    public async Task<IActionResult>
+        CreateFromCart(
+            [FromBody]
+            CreateOrderDto dto)
     {
+        var validationResult =
+            await _createOrderValidator
+                .ValidateAsync(dto);
+
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(
+                ApiResponse<CheckoutResponseDto>.Fail(
+                    validationResult.Errors
+                        .Select(x => x.ErrorMessage)
+                        .ToList(),
+
+                    "Validation failed."));
+        }
+
+
         try
         {
-            var userId = GetUserId();
+            var userId =
+                GetUserId();
 
-            var order =
+            var result =
                 await _orderService
                     .CreateOrderFromCartAsync(
                         userId,
                         dto);
 
+
+            // Razorpay first call
+
+            if (result.PaymentRequired)
+            {
+                return Ok(
+                    ApiResponse<CheckoutResponseDto>
+                        .Success(
+                            result,
+                            "Razorpay order created successfully."));
+            }
+
+
+            // Actual Order created
+
             return StatusCode(
                 (int)HttpStatusCode.Created,
-                ApiResponse<OrderResponseDto>.Success(
-                    order,
-                    "Order placed successfully.",
-                    HttpStatusCode.Created));
+
+                ApiResponse<CheckoutResponseDto>
+                    .Success(
+                        result,
+                        "Order placed successfully.",
+                        HttpStatusCode.Created));
         }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Unauthorized.",
-                    HttpStatusCode.Unauthorized));
+                ApiResponse<CheckoutResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Unauthorized.",
+
+                        HttpStatusCode.Unauthorized));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to place order."));
+                ApiResponse<CheckoutResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Failed to process order."));
         }
     }
 
 
     // BUY NOW
-   
+    
 
     [HttpPost("buy-now")]
-    public async Task<IActionResult> BuyNow(
-        [FromBody] BuyNowOrderDto dto)
+    public async Task<IActionResult>
+        BuyNow(
+            [FromBody]
+            BuyNowOrderDto dto)
     {
+        var validationResult =
+            await _buyNowOrderValidator
+                .ValidateAsync(dto);
+
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(
+                ApiResponse<CheckoutResponseDto>.Fail(
+                    validationResult.Errors
+                        .Select(x => x.ErrorMessage)
+                        .ToList(),
+
+                    "Validation failed."));
+        }
+
+
         try
         {
-            var userId = GetUserId();
+            var userId =
+                GetUserId();
 
-            var order =
+            var result =
                 await _orderService
                     .CreateBuyNowOrderAsync(
                         userId,
                         dto);
 
+
+            // Razorpay first call
+
+            if (result.PaymentRequired)
+            {
+                return Ok(
+                    ApiResponse<CheckoutResponseDto>
+                        .Success(
+                            result,
+                            "Razorpay order created successfully."));
+            }
+
+
+            // Actual Order created
+
             return StatusCode(
                 (int)HttpStatusCode.Created,
-                ApiResponse<OrderResponseDto>.Success(
-                    order,
-                    "Order placed successfully.",
-                    HttpStatusCode.Created));
+
+                ApiResponse<CheckoutResponseDto>
+                    .Success(
+                        result,
+                        "Order placed successfully.",
+                        HttpStatusCode.Created));
         }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Unauthorized.",
-                    HttpStatusCode.Unauthorized));
+                ApiResponse<CheckoutResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Unauthorized.",
+
+                        HttpStatusCode.Unauthorized));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to place order."));
+                ApiResponse<CheckoutResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Failed to process order."));
         }
     }
 
 
-    // GET ALL USER ORDERS
+    // GET USER ORDERS
 
     [HttpGet]
-    public async Task<IActionResult> GetOrders()
+    public async Task<IActionResult>
+        GetOrders()
     {
         try
         {
-            var userId = GetUserId();
+            var userId =
+                GetUserId();
 
             var orders =
                 await _orderService
-                    .GetUserOrdersAsync(userId);
+                    .GetUserOrdersAsync(
+                        userId);
 
             return Ok(
-                ApiResponse<List<OrderResponseDto>>.Success(
-                    orders,
-                    "Orders retrieved successfully."));
+                ApiResponse<List<OrderResponseDto>>
+                    .Success(
+                        orders,
+                        "Orders retrieved successfully."));
         }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(
-                ApiResponse<List<OrderResponseDto>>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Unauthorized.",
-                    HttpStatusCode.Unauthorized));
+                ApiResponse<List<OrderResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Unauthorized.",
+
+                        HttpStatusCode.Unauthorized));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<List<OrderResponseDto>>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to retrieve orders."));
+                ApiResponse<List<OrderResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Failed to retrieve orders."));
         }
     }
 
@@ -162,12 +270,13 @@ public class OrderController : ControllerBase
     // GET SINGLE ORDER
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetOrderById(
-        int id)
+    public async Task<IActionResult>
+        GetOrderById(int id)
     {
         try
         {
-            var userId = GetUserId();
+            var userId =
+                GetUserId();
 
             var order =
                 await _orderService
@@ -178,53 +287,64 @@ public class OrderController : ControllerBase
             if (order == null)
             {
                 return NotFound(
-                    ApiResponse<OrderResponseDto>.Fail(
-                        new List<string>
-                        {
-                            "Order not found."
-                        },
-                        "Order not found.",
-                        HttpStatusCode.NotFound));
+                    ApiResponse<OrderResponseDto>
+                        .Fail(
+                            new List<string>
+                            {
+                                "Order not found."
+                            },
+
+                            "Order not found.",
+
+                            HttpStatusCode.NotFound));
             }
 
+
             return Ok(
-                ApiResponse<OrderResponseDto>.Success(
-                    order,
-                    "Order retrieved successfully."));
+                ApiResponse<OrderResponseDto>
+                    .Success(
+                        order,
+                        "Order retrieved successfully."));
         }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Unauthorized.",
-                    HttpStatusCode.Unauthorized));
+                ApiResponse<OrderResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Unauthorized.",
+
+                        HttpStatusCode.Unauthorized));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to retrieve order."));
+                ApiResponse<OrderResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Failed to retrieve order."));
         }
     }
 
 
-    // CANCEL ORDER
-   
+    // CANCEL
+
     [HttpPut("{id:int}/cancel")]
-    public async Task<IActionResult> CancelOrder(
-        int id)
+    public async Task<IActionResult>
+        CancelOrder(int id)
     {
         try
         {
-            var userId = GetUserId();
+            var userId =
+                GetUserId();
 
             var order =
                 await _orderService
@@ -235,45 +355,57 @@ public class OrderController : ControllerBase
             if (order == null)
             {
                 return NotFound(
-                    ApiResponse<OrderResponseDto>.Fail(
-                        new List<string>
-                        {
-                            "Order not found."
-                        },
-                        "Order not found.",
-                        HttpStatusCode.NotFound));
+                    ApiResponse<OrderResponseDto>
+                        .Fail(
+                            new List<string>
+                            {
+                                "Order not found."
+                            },
+
+                            "Order not found.",
+
+                            HttpStatusCode.NotFound));
             }
 
+
             return Ok(
-                ApiResponse<OrderResponseDto>.Success(
-                    order,
-                    "Order cancelled successfully."));
+                ApiResponse<OrderResponseDto>
+                    .Success(
+                        order,
+                        "Order cancelled successfully."));
         }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Unauthorized.",
-                    HttpStatusCode.Unauthorized));
+                ApiResponse<OrderResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Unauthorized.",
+
+                        HttpStatusCode.Unauthorized));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<OrderResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to cancel order."));
+                ApiResponse<OrderResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+
+                        "Failed to cancel order."));
         }
     }
 
 
-    // GET USER ID FROM JWT
+    // =====================================================
+    // JWT USER ID
+    // =====================================================
 
     private int GetUserId()
     {
@@ -281,11 +413,14 @@ public class OrderController : ControllerBase
             User.FindFirstValue(
                 ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrWhiteSpace(userId))
+
+        if (string.IsNullOrWhiteSpace(
+                userId))
         {
             throw new UnauthorizedAccessException(
                 "User ID not found in token.");
         }
+
 
         if (!int.TryParse(
                 userId,
@@ -294,6 +429,7 @@ public class OrderController : ControllerBase
             throw new UnauthorizedAccessException(
                 "Invalid user ID in token.");
         }
+
 
         return parsedUserId;
     }

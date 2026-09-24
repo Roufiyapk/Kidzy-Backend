@@ -8,6 +8,7 @@ namespace Kidzy.Application.Services;
 public class ProductService : IProductService
 {
     private readonly IProductRepository _productRepository;
+
     private readonly ICategoryRepository _categoryRepository;
 
     public ProductService(
@@ -17,10 +18,6 @@ public class ProductService : IProductService
         _productRepository = productRepository;
         _categoryRepository = categoryRepository;
     }
-
-
-    // 
-    // GET ALL PRODUCTS
 
     public async Task<List<ProductResponseDto>>
         GetAllAsync()
@@ -33,23 +30,18 @@ public class ProductService : IProductService
             .ToList();
     }
 
-
-    // GET BY ID
-
     public async Task<ProductResponseDto?>
         GetByIdAsync(int id)
     {
         var product =
-            await _productRepository.GetByIdAsync(id);
+            await _productRepository
+                .GetByIdAsync(id);
 
         if (product == null)
             return null;
 
         return MapToResponse(product);
     }
-
-
-    // GET BY CATEGORY
 
     public async Task<List<ProductResponseDto>>
         GetByCategoryAsync(int categoryId)
@@ -59,9 +51,7 @@ public class ProductService : IProductService
                 .GetByIdAsync(categoryId);
 
         if (category == null)
-        {
             return new List<ProductResponseDto>();
-        }
 
         var products =
             await _productRepository
@@ -72,29 +62,23 @@ public class ProductService : IProductService
             .ToList();
     }
 
-
-    // CREATE
-
     public async Task<ProductResponseDto>
         CreateAsync(CreateProductDto dto)
     {
-        // Check Category
         var category =
             await _categoryRepository
                 .GetByIdAsync(dto.CategoryId);
 
         if (category == null)
-        {
             throw new Exception(
                 "Category not found.");
-        }
 
-
-        // Check SubCategory belongs to Category
         var subCategory =
             category.SubCategories
-                .FirstOrDefault(x =>
-                    x.Id == dto.SubCategoryId);
+                .FirstOrDefault(
+                    x =>
+                        x.Id ==
+                        dto.SubCategoryId);
 
         if (subCategory == null)
         {
@@ -102,53 +86,51 @@ public class ProductService : IProductService
                 "SubCategory not found for this category.");
         }
 
-
         ValidateProduct(
             dto.Name,
             dto.Price,
+            dto.Stock,
             dto.ImageUrl,
             dto.Variants);
 
+        var product =
+            new Product
+            {
+                Name =
+                    dto.Name.Trim(),
 
-        var product = new Product
+                Description =
+                    dto.Description?.Trim()
+                    ?? string.Empty,
+
+                Price =
+                    dto.Price,
+
+                Stock =
+                    dto.Stock,
+
+                ImageUrl =
+                    dto.ImageUrl.Trim(),
+
+                BestSeller =
+                    dto.BestSeller,
+
+                NewArrival =
+                    dto.NewArrival,
+
+                CategoryId =
+                    dto.CategoryId,
+
+                SubCategoryId =
+                    dto.SubCategoryId
+            };
+
+        foreach (var ageGroup
+                 in dto.Variants
+                    ?? new List<ProductVariantDto>())
         {
-            Name =
-                dto.Name.Trim(),
-
-            Description =
-                dto.Description?.Trim()
-                ?? string.Empty,
-
-            Price =
-                dto.Price,
-
-            ImageUrl =
-                dto.ImageUrl.Trim(),
-
-            BestSeller =
-                dto.BestSeller,
-
-            NewArrival =
-                dto.NewArrival,
-
-            CategoryId =
-                dto.CategoryId,
-
-            SubCategoryId =
-                dto.SubCategoryId
-        };
-
-
-        // ADD VARIANTS
-        // AgeGroup → Sizes → Stock
-
-        foreach (
-            var ageGroup in
-            dto.Variants ??
-            new List<ProductVariantDto>())
-        {
-            foreach (
-                var size in ageGroup.Sizes)
+            foreach (var size
+                     in ageGroup.Sizes)
             {
                 product.Variants.Add(
                     new ProductVariant
@@ -165,10 +147,8 @@ public class ProductService : IProductService
             }
         }
 
-
         await _productRepository
             .AddAsync(product);
-
 
         var created =
             await _productRepository
@@ -180,12 +160,8 @@ public class ProductService : IProductService
                 "Product could not be created.");
         }
 
-
         return MapToResponse(created);
     }
-
-
-    // UPDATE
 
     public async Task<ProductResponseDto?>
         UpdateAsync(
@@ -199,8 +175,6 @@ public class ProductService : IProductService
         if (product == null)
             return null;
 
-
-        // Check Category
         var category =
             await _categoryRepository
                 .GetByIdAsync(dto.CategoryId);
@@ -211,12 +185,12 @@ public class ProductService : IProductService
                 "Category not found.");
         }
 
-
-        // Check SubCategory belongs to Category
         var subCategory =
             category.SubCategories
-                .FirstOrDefault(x =>
-                    x.Id == dto.SubCategoryId);
+                .FirstOrDefault(
+                    x =>
+                        x.Id ==
+                        dto.SubCategoryId);
 
         if (subCategory == null)
         {
@@ -224,15 +198,12 @@ public class ProductService : IProductService
                 "SubCategory not found for this category.");
         }
 
-
         ValidateProduct(
             dto.Name,
             dto.Price,
+            dto.Stock,
             dto.ImageUrl,
             dto.Variants);
-
-
-        // UPDATE PRODUCT
 
         product.Name =
             dto.Name.Trim();
@@ -243,6 +214,9 @@ public class ProductService : IProductService
 
         product.Price =
             dto.Price;
+
+        product.Stock =
+            dto.Stock;
 
         product.ImageUrl =
             dto.ImageUrl.Trim();
@@ -259,19 +233,14 @@ public class ProductService : IProductService
         product.SubCategoryId =
             dto.SubCategoryId;
 
-
-        // UPDATE VARIANTS
-
         product.Variants.Clear();
 
-
-        foreach (
-            var ageGroup in
-            dto.Variants ??
-            new List<ProductVariantDto>())
+        foreach (var ageGroup
+                 in dto.Variants
+                    ?? new List<ProductVariantDto>())
         {
-            foreach (
-                var size in ageGroup.Sizes)
+            foreach (var size
+                     in ageGroup.Sizes)
             {
                 product.Variants.Add(
                     new ProductVariant
@@ -291,10 +260,8 @@ public class ProductService : IProductService
             }
         }
 
-
         await _productRepository
             .UpdateAsync(product);
-
 
         var updated =
             await _productRepository
@@ -303,12 +270,8 @@ public class ProductService : IProductService
         if (updated == null)
             return null;
 
-
         return MapToResponse(updated);
     }
-
-
-    // DELETE
 
     public async Task<bool>
         DeleteAsync(int id)
@@ -320,62 +283,51 @@ public class ProductService : IProductService
         if (product == null)
             return false;
 
-
         await _productRepository
             .DeleteAsync(product);
 
         return true;
     }
 
-
-    // VALIDATION
-
     private static void ValidateProduct(
         string name,
         decimal price,
+        int stock,
         string imageUrl,
         List<ProductVariantDto>? variants)
     {
         if (string.IsNullOrWhiteSpace(name))
-        {
             throw new Exception(
                 "Product name is required.");
-        }
 
         if (price <= 0)
-        {
             throw new Exception(
                 "Price must be greater than zero.");
-        }
+
+        if (stock < 0)
+            throw new Exception(
+                "Stock cannot be negative.");
 
         if (string.IsNullOrWhiteSpace(imageUrl))
-        {
             throw new Exception(
                 "Image URL is required.");
-        }
-
-
-        // Variants are optional.
-        // Products without size are allowed.
 
         if (variants == null)
             return;
 
-
         foreach (var ageGroup in variants)
         {
             if (string.IsNullOrWhiteSpace(
-                ageGroup.AgeGroup))
+                    ageGroup.AgeGroup))
             {
                 throw new Exception(
                     "Age group is required.");
             }
 
-
             foreach (var size in ageGroup.Sizes)
             {
                 if (string.IsNullOrWhiteSpace(
-                    size.Size))
+                        size.Size))
                 {
                     throw new Exception(
                         "Size is required.");
@@ -389,9 +341,6 @@ public class ProductService : IProductService
             }
         }
     }
-
-
-    // MAP PRODUCT → RESPONSE
 
     private static ProductResponseDto
         MapToResponse(Product product)
@@ -409,6 +358,9 @@ public class ProductService : IProductService
 
             Price =
                 product.Price,
+
+            Stock =
+                product.Stock,
 
             ImageUrl =
                 product.ImageUrl,
@@ -430,29 +382,35 @@ public class ProductService : IProductService
                 product.SubCategory?.Name
                 ?? string.Empty,
 
-            // Convert flat DB rows
-            // back into grouped API response
             Variants =
                 product.Variants
                     .GroupBy(v => v.AgeGroup)
-                    .Select(group =>
-                        new ProductVariantDto
-                        {
-                            AgeGroup =
-                                group.Key,
+                    .Select(
+                        group =>
+                            new ProductVariantDto
+                            {
+                                AgeGroup =
+                                    group.Key
+                                    ?? string.Empty,
 
-                            Sizes =
-                                group.Select(v =>
-                                    new SizeStockDto
-                                    {
-                                        Size =
-                                            v.Size,
+                                Sizes =
+                                    group
+                                        .Select(
+                                            v =>
+                                                new SizeStockDto
+                                                {
+                                                    Id =
+                                                        v.Id,
 
-                                        Stock =
-                                            v.Stock
-                                    })
-                                .ToList()
-                        })
+                                                    Size =
+                                                        v.Size
+                                                        ?? string.Empty,
+
+                                                    Stock =
+                                                        v.Stock
+                                                })
+                                        .ToList()
+                            })
                     .ToList()
         };
     }

@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Kidzy.Application.DTOs.Orders;
+﻿using Kidzy.Application.DTOs.Orders;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
@@ -7,25 +6,39 @@ using Kidzy.Domain.Enums;
 
 namespace Kidzy.Application.Services;
 
-public class OrderService : IOrderService
+public class OrderService
+    : IOrderService
 {
     private readonly IOrderRepository _orderRepository;
 
+    private readonly IRazorpayService _razorpayService;
+
     public OrderService(
-        IOrderRepository orderRepository)
+        IOrderRepository orderRepository,
+        IRazorpayService razorpayService)
     {
-        _orderRepository = orderRepository;
+        _orderRepository =
+            orderRepository;
+
+        _razorpayService =
+            razorpayService;
     }
 
 
-    // ORDER FROM CART
-
-    public async Task<OrderResponseDto>
+    // CART
+    
+    public async Task<CheckoutResponseDto>
         CreateOrderFromCartAsync(
             int userId,
             CreateOrderDto dto)
     {
-        ValidateDeliveryDetails(dto);
+        var paymentMethod =
+            dto.PaymentMethod
+                .Trim()
+                .ToLowerInvariant();
+
+
+        // GET CART
 
         var cart =
             await _orderRepository
@@ -39,18 +52,18 @@ public class OrderService : IOrderService
         }
 
 
-        // Check stock before creating order
+        // CHECK STOCK
 
-        foreach (var cartItem in cart.Items)
+        foreach (var item in cart.Items)
         {
             CheckStock(
-                cartItem.Product,
-                cartItem.ProductVariant,
-                cartItem.Quantity);
+                item.Product,
+                item.ProductVariant,
+                item.Quantity);
         }
 
 
-        // Calculate totals
+        // CALCULATE TOTAL
 
         var subtotal =
             cart.Items.Sum(
@@ -59,139 +72,217 @@ public class OrderService : IOrderService
                     item.Quantity);
 
         var deliveryFee =
-            CalculateDeliveryFee(subtotal);
+            CalculateDeliveryFee(
+                subtotal);
 
-        var totalAmount =
+        var total =
             subtotal + deliveryFee;
 
 
-        // Create order
+        // RAZORPAY FIRST CALL
 
-        var order = new Order
+        if (paymentMethod == "razorpay" &&
+            !HasPaymentDetails(dto))
         {
-            UserId = userId,
+            var receipt =
+                CreateReceipt(
+                    "KC",
+                    userId);
 
-            Subtotal = subtotal,
+            var razorpayOrder =
+                await _razorpayService
+                    .CreateOrderAsync(
+                        total,
+                        receipt);
 
-            DeliveryFee = deliveryFee,
+            return new CheckoutResponseDto
+            {
+                PaymentRequired =
+                    true,
 
-            TotalAmount = totalAmount,
+                RazorpayOrder =
+                    razorpayOrder,
 
-            ShippingName =
-                dto.Name.Trim(),
+                Order =
+                    null
+            };
+        }
 
-            ShippingPhone =
-                dto.Phone.Trim(),
 
-            ShippingAddress =
-                dto.Address.Trim(),
+        // RAZORPAY SECOND CALL
 
-            ShippingPincode =
-                dto.Pincode.Trim(),
-
-            PaymentMethod =
-                dto.PaymentMethod
-                    .Trim()
-                    .ToLowerInvariant(),
-
-            PaymentStatus =
-                GetPaymentStatus(
-                    dto.PaymentMethod),
-
-            RazorpayPaymentId =
-                dto.RazorpayPaymentId,
-
-            RazorpayOrderId =
+        if (paymentMethod == "razorpay")
+        {
+            await VerifyRazorpayPayment(
                 dto.RazorpayOrderId,
-
-            RazorpaySignature =
+                dto.RazorpayPaymentId,
                 dto.RazorpaySignature,
-
-            Status =
-                OrderStatus.OrderPlaced,
-
-            CreatedAt =
-                DateTime.UtcNow
-        };
+                total,
+                $"KC-{userId}-");
+        }
 
 
-        // Create order items
+        // CREATE ACTUAL ORDER
+
+        var order =
+            new Order
+            {
+                UserId =
+                    userId,
+
+                Subtotal =
+                    subtotal,
+
+                DeliveryFee =
+                    deliveryFee,
+
+                TotalAmount =
+                    total,
+
+                ShippingName =
+                    dto.Name.Trim(),
+
+                ShippingPhone =
+                    dto.Phone.Trim(),
+
+                ShippingAddress =
+                    dto.Address.Trim(),
+
+                ShippingPincode =
+                    dto.Pincode.Trim(),
+
+                PaymentMethod =
+                    paymentMethod,
+
+                PaymentStatus =
+                    paymentMethod == "razorpay"
+                        ? "Paid"
+                        : "Pending",
+
+                RazorpayPaymentId =
+                    paymentMethod == "razorpay"
+                        ? dto.RazorpayPaymentId
+                        : null,
+
+                RazorpayOrderId =
+                    paymentMethod == "razorpay"
+                        ? dto.RazorpayOrderId
+                        : null,
+
+                RazorpaySignature =
+                    paymentMethod == "razorpay"
+                        ? dto.RazorpaySignature
+                        : null,
+
+                Status =
+                    OrderStatus.OrderPlaced,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
+
+        // ORDER ITEMS
 
         foreach (var cartItem in cart.Items)
         {
             var variant =
                 cartItem.ProductVariant;
 
-            var orderItem = new OrderItem
-            {
-                ProductId =
-                    cartItem.ProductId,
+            var orderItem =
+                new OrderItem
+                {
+                    ProductId =
+                        cartItem.ProductId,
 
-                ProductVariantId =
-                    cartItem.ProductVariantId,
+                    ProductVariantId =
+                        cartItem.ProductVariantId,
 
-                ProductName =
-                    cartItem.Product.Name,
+                    ProductName =
+                        cartItem.Product.Name,
 
-                AgeGroup =
-                    variant?.AgeGroup,
+                    AgeGroup =
+                        variant?.AgeGroup,
 
-                Size =
-                    variant?.Size,
+                    Size =
+                        variant?.Size,
 
-                Price =
-                    cartItem.Product.Price,
+                    Price =
+                        cartItem.Product.Price,
 
-                Quantity =
-                    cartItem.Quantity,
+                    Quantity =
+                        cartItem.Quantity,
 
-                TotalPrice =
-                    cartItem.Product.Price *
-                    cartItem.Quantity
-            };
+                    TotalPrice =
+                        cartItem.Product.Price *
+                        cartItem.Quantity
+                };
 
-            order.Items.Add(orderItem);
+            order.Items.Add(
+                orderItem);
 
 
-            // Reduce stock
+            // REDUCE STOCK
 
             if (variant != null)
             {
                 variant.Stock -=
                     cartItem.Quantity;
             }
+            else
+            {
+                cartItem.Product.Stock -=
+                    cartItem.Quantity;
+            }
         }
 
+
+        // SAVE ORDER
 
         await _orderRepository
             .AddAsync(order);
 
 
-        // Cart order → remove cart items
+        // CLEAR CART
 
         _orderRepository
-            .RemoveCartItems(cart.Items);
+            .RemoveCartItems(
+                cart.Items);
 
 
         await _orderRepository
             .SaveChangesAsync();
 
 
-        return MapToDto(order);
+        return new CheckoutResponseDto
+        {
+            PaymentRequired =
+                false,
+
+            RazorpayOrder =
+                null,
+
+            Order =
+                MapToDto(order)
+        };
     }
 
 
     // BUY NOW
+   
 
-    public async Task<OrderResponseDto>
+    public async Task<CheckoutResponseDto>
         CreateBuyNowOrderAsync(
             int userId,
             BuyNowOrderDto dto)
     {
-        ValidateBuyNow(dto);
+        var paymentMethod =
+            dto.PaymentMethod
+                .Trim()
+                .ToLowerInvariant();
 
 
-        // Get selected product
+        // GET PRODUCT
 
         var product =
             await _orderRepository
@@ -205,176 +296,224 @@ public class OrderService : IOrderService
         }
 
 
-        // Check whether product has variants
+        // GET VARIANT
 
-        var hasVariants =
-            product.Variants != null &&
-            product.Variants.Any();
-
-
-        if (hasVariants &&
-            dto.ProductVariantId == null)
-        {
-            throw new Exception(
-                "Please select age group and size.");
-        }
+        var variant =
+            GetVariant(
+                product,
+                dto.ProductVariantId);
 
 
-        ProductVariant? variant = null;
+        // CHECK STOCK
+
+        CheckStock(
+            product,
+            variant,
+            dto.Quantity);
 
 
-        // Get selected variant
-
-        if (dto.ProductVariantId.HasValue)
-        {
-            variant =
-                product.Variants
-                    .FirstOrDefault(
-                        v =>
-                            v.Id ==
-                            dto.ProductVariantId.Value);
-
-            if (variant == null)
-            {
-                throw new Exception(
-                    "Invalid product variant.");
-            }
-
-            if (dto.Quantity >
-                variant.Stock)
-            {
-                throw new Exception(
-                    "Requested quantity exceeds available stock.");
-            }
-        }
-
-
-        // Calculate totals
+        // CALCULATE TOTAL
 
         var subtotal =
             product.Price *
             dto.Quantity;
 
         var deliveryFee =
-            CalculateDeliveryFee(subtotal);
+            CalculateDeliveryFee(
+                subtotal);
 
-        var totalAmount =
+        var total =
             subtotal + deliveryFee;
 
 
-        // Create order
+        // RAZORPAY FIRST CALL
 
-        var order = new Order
+        if (paymentMethod == "razorpay" &&
+            !HasPaymentDetails(dto))
         {
-            UserId = userId,
+            var receipt =
+                CreateReceipt(
+                    "KB",
+                    userId);
 
-            Subtotal = subtotal,
+            var razorpayOrder =
+                await _razorpayService
+                    .CreateOrderAsync(
+                        total,
+                        receipt);
 
-            DeliveryFee = deliveryFee,
+            return new CheckoutResponseDto
+            {
+                PaymentRequired =
+                    true,
 
-            TotalAmount = totalAmount,
+                RazorpayOrder =
+                    razorpayOrder,
 
-            ShippingName =
-                dto.Name.Trim(),
+                Order =
+                    null
+            };
+        }
 
-            ShippingPhone =
-                dto.Phone.Trim(),
 
-            ShippingAddress =
-                dto.Address.Trim(),
+        // RAZORPAY SECOND CALL
 
-            ShippingPincode =
-                dto.Pincode.Trim(),
-
-            PaymentMethod =
-                dto.PaymentMethod
-                    .Trim()
-                    .ToLowerInvariant(),
-
-            PaymentStatus =
-                GetPaymentStatus(
-                    dto.PaymentMethod),
-
-            RazorpayPaymentId =
-                dto.RazorpayPaymentId,
-
-            RazorpayOrderId =
+        if (paymentMethod == "razorpay")
+        {
+            await VerifyRazorpayPayment(
                 dto.RazorpayOrderId,
-
-            RazorpaySignature =
+                dto.RazorpayPaymentId,
                 dto.RazorpaySignature,
-
-            Status =
-                OrderStatus.OrderPlaced,
-
-            CreatedAt =
-                DateTime.UtcNow
-        };
+                total,
+                $"KB-{userId}-");
+        }
 
 
-        // Create single order item
+        // CREATE ORDER
 
-        var orderItem = new OrderItem
-        {
-            ProductId =
-                product.Id,
+        var order =
+            new Order
+            {
+                UserId =
+                    userId,
 
-            ProductVariantId =
-                dto.ProductVariantId,
+                Subtotal =
+                    subtotal,
 
-            ProductName =
-                product.Name,
+                DeliveryFee =
+                    deliveryFee,
 
-            AgeGroup =
-                variant?.AgeGroup,
+                TotalAmount =
+                    total,
 
-            Size =
-                variant?.Size,
+                ShippingName =
+                    dto.Name.Trim(),
 
-            Price =
-                product.Price,
+                ShippingPhone =
+                    dto.Phone.Trim(),
 
-            Quantity =
-                dto.Quantity,
+                ShippingAddress =
+                    dto.Address.Trim(),
 
-            TotalPrice =
-                product.Price *
-                dto.Quantity
-        };
+                ShippingPincode =
+                    dto.Pincode.Trim(),
 
-        order.Items.Add(orderItem);
+                PaymentMethod =
+                    paymentMethod,
+
+                PaymentStatus =
+                    paymentMethod == "razorpay"
+                        ? "Paid"
+                        : "Pending",
+
+                RazorpayPaymentId =
+                    paymentMethod == "razorpay"
+                        ? dto.RazorpayPaymentId
+                        : null,
+
+                RazorpayOrderId =
+                    paymentMethod == "razorpay"
+                        ? dto.RazorpayOrderId
+                        : null,
+
+                RazorpaySignature =
+                    paymentMethod == "razorpay"
+                        ? dto.RazorpaySignature
+                        : null,
+
+                Status =
+                    OrderStatus.OrderPlaced,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
 
 
-        // Reduce stock
+        // ORDER ITEM
+
+        var orderItem =
+            new OrderItem
+            {
+                ProductId =
+                    product.Id,
+
+                ProductVariantId =
+                    dto.ProductVariantId,
+
+                ProductName =
+                    product.Name,
+
+                AgeGroup =
+                    variant?.AgeGroup,
+
+                Size =
+                    variant?.Size,
+
+                Price =
+                    product.Price,
+
+                Quantity =
+                    dto.Quantity,
+
+                TotalPrice =
+                    product.Price *
+                    dto.Quantity
+            };
+
+        order.Items.Add(
+            orderItem);
+
+
+        // STOCK REDUCTION
 
         if (variant != null)
         {
             variant.Stock -=
                 dto.Quantity;
         }
+        else
+        {
+            product.Stock -=
+                dto.Quantity;
+        }
 
+
+        // SAVE
 
         await _orderRepository
             .AddAsync(order);
 
-        // Buy Now does NOT clear cart.
+
+        // Buy Now → cart untouched
 
         await _orderRepository
             .SaveChangesAsync();
 
 
-        return MapToDto(order);
+        return new CheckoutResponseDto
+        {
+            PaymentRequired =
+                false,
+
+            RazorpayOrder =
+                null,
+
+            Order =
+                MapToDto(order)
+        };
     }
 
 
-    // GET ALL USER ORDERS
+    // GET USER ORDERS
 
     public async Task<List<OrderResponseDto>>
-        GetUserOrdersAsync(int userId)
+        GetUserOrdersAsync(
+            int userId)
     {
         var orders =
             await _orderRepository
-                .GetUserOrdersAsync(userId);
+                .GetUserOrdersAsync(
+                    userId);
 
         return orders
             .Select(MapToDto)
@@ -382,7 +521,7 @@ public class OrderService : IOrderService
     }
 
 
-    // GET SINGLE USER ORDER
+    // GET SINGLE ORDER
 
     public async Task<OrderResponseDto?>
         GetOrderByIdAsync(
@@ -402,9 +541,7 @@ public class OrderService : IOrderService
     }
 
 
-    // =====================================================
-    // CANCEL USER ORDER
-    // =====================================================
+    // CANCEL ORDER
 
     public async Task<OrderResponseDto?>
         CancelOrderAsync(
@@ -421,8 +558,6 @@ public class OrderService : IOrderService
             return null;
 
 
-        // User can cancel only before shipping
-
         if (order.Status !=
                 OrderStatus.OrderPlaced &&
             order.Status !=
@@ -433,13 +568,18 @@ public class OrderService : IOrderService
         }
 
 
-        // Restore stock
+        // RESTOCK
 
         foreach (var item in order.Items)
         {
             if (item.ProductVariant != null)
             {
                 item.ProductVariant.Stock +=
+                    item.Quantity;
+            }
+            else if (item.Product != null)
+            {
+                item.Product.Stock +=
                     item.Quantity;
             }
         }
@@ -460,150 +600,194 @@ public class OrderService : IOrderService
     }
 
 
-    // =====================================================
-    // VALIDATION
-    // =====================================================
+    // CHECK RAZORPAY DETAILS
 
-    private static void ValidateDeliveryDetails(
+    private static bool HasPaymentDetails(
         CreateOrderDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name))
+        var hasOrderId =
+            !string.IsNullOrWhiteSpace(
+                dto.RazorpayOrderId);
+
+        var hasPaymentId =
+            !string.IsNullOrWhiteSpace(
+                dto.RazorpayPaymentId);
+
+        var hasSignature =
+            !string.IsNullOrWhiteSpace(
+                dto.RazorpaySignature);
+
+
+        if (!hasOrderId &&
+            !hasPaymentId &&
+            !hasSignature)
         {
-            throw new Exception(
-                "Name is required.");
+            return false;
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Phone))
+
+        if (!hasOrderId ||
+            !hasPaymentId ||
+            !hasSignature)
         {
             throw new Exception(
-                "Phone number is required.");
+                "Razorpay payment details are incomplete.");
         }
 
-        if (!Regex.IsMatch(
-                dto.Phone.Trim(),
-                @"^\d{10}$"))
-        {
-            throw new Exception(
-                "Phone number must be exactly 10 digits.");
-        }
 
-        if (string.IsNullOrWhiteSpace(dto.Address))
-        {
-            throw new Exception(
-                "Address is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Pincode))
-        {
-            throw new Exception(
-                "Pincode is required.");
-        }
-
-        if (!Regex.IsMatch(
-                dto.Pincode.Trim(),
-                @"^\d{6}$"))
-        {
-            throw new Exception(
-                "Pincode must be exactly 6 digits.");
-        }
-
-        ValidatePaymentMethod(
-            dto.PaymentMethod);
+        return true;
     }
 
 
-    private static void ValidateBuyNow(
+    private static bool HasPaymentDetails(
         BuyNowOrderDto dto)
     {
-        if (dto.ProductId <= 0)
+        var hasOrderId =
+            !string.IsNullOrWhiteSpace(
+                dto.RazorpayOrderId);
+
+        var hasPaymentId =
+            !string.IsNullOrWhiteSpace(
+                dto.RazorpayPaymentId);
+
+        var hasSignature =
+            !string.IsNullOrWhiteSpace(
+                dto.RazorpaySignature);
+
+
+        if (!hasOrderId &&
+            !hasPaymentId &&
+            !hasSignature)
         {
-            throw new Exception(
-                "Invalid product.");
+            return false;
         }
 
-        if (dto.Quantity <= 0)
+
+        if (!hasOrderId ||
+            !hasPaymentId ||
+            !hasSignature)
         {
             throw new Exception(
-                "Quantity must be greater than zero.");
+                "Razorpay payment details are incomplete.");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Name))
-        {
-            throw new Exception(
-                "Name is required.");
-        }
 
-        if (string.IsNullOrWhiteSpace(dto.Phone))
-        {
-            throw new Exception(
-                "Phone number is required.");
-        }
-
-        if (!Regex.IsMatch(
-                dto.Phone.Trim(),
-                @"^\d{10}$"))
-        {
-            throw new Exception(
-                "Phone number must be exactly 10 digits.");
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Address))
-        {
-            throw new Exception(
-                "Address is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Pincode))
-        {
-            throw new Exception(
-                "Pincode is required.");
-        }
-
-        if (!Regex.IsMatch(
-                dto.Pincode.Trim(),
-                @"^\d{6}$"))
-        {
-            throw new Exception(
-                "Pincode must be exactly 6 digits.");
-        }
-
-        ValidatePaymentMethod(
-            dto.PaymentMethod);
+        return true;
     }
 
 
-    private static void ValidatePaymentMethod(
-        string paymentMethod)
+    // VERIFY RAZORPAY
+
+    private async Task
+        VerifyRazorpayPayment(
+            string? razorpayOrderId,
+            string? razorpayPaymentId,
+            string? razorpaySignature,
+            decimal expectedAmount,
+            string expectedReceiptPrefix)
     {
-        if (string.IsNullOrWhiteSpace(paymentMethod))
+        if (string.IsNullOrWhiteSpace(
+                razorpayOrderId) ||
+            string.IsNullOrWhiteSpace(
+                razorpayPaymentId) ||
+            string.IsNullOrWhiteSpace(
+                razorpaySignature))
         {
             throw new Exception(
-                "Payment method is required.");
+                "Razorpay payment details are required.");
         }
 
-        var method =
-            paymentMethod
-                .Trim()
-                .ToLowerInvariant();
 
-        if (method != "cod" &&
-            method != "razorpay")
+        var alreadyUsed =
+            await _orderRepository
+                .IsPaymentAlreadyUsedAsync(
+                    razorpayPaymentId);
+
+        if (alreadyUsed)
         {
             throw new Exception(
-                "Invalid payment method.");
+                "This payment has already been used.");
+        }
+
+
+        var valid =
+            await _razorpayService
+                .VerifyPaymentAsync(
+                    razorpayOrderId,
+                    razorpayPaymentId,
+                    razorpaySignature,
+                    expectedAmount,
+                    expectedReceiptPrefix);
+
+        if (!valid)
+        {
+            throw new Exception(
+                "Razorpay payment verification failed.");
         }
     }
 
 
-    // =====================================================
+    // GET VARIANT
+
+    private static ProductVariant?
+        GetVariant(
+            Product product,
+            int? productVariantId)
+    {
+        var hasVariants =
+            product.Variants != null &&
+            product.Variants.Any();
+
+
+        if (hasVariants &&
+            productVariantId == null)
+        {
+            throw new Exception(
+                "Please select age group and size.");
+        }
+
+
+        if (!productVariantId.HasValue)
+        {
+            return null;
+        }
+
+
+        var variant =
+            product.Variants
+                .FirstOrDefault(
+                    v =>
+                        v.Id ==
+                        productVariantId.Value);
+
+
+        if (variant == null)
+        {
+            throw new Exception(
+                "Invalid product variant.");
+        }
+
+
+        return variant;
+    }
+
+
     // STOCK
-    // =====================================================
 
     private static void CheckStock(
         Product product,
         ProductVariant? variant,
         int quantity)
     {
+        if (quantity <= 0)
+        {
+            throw new Exception(
+                "Quantity must be greater than zero.");
+        }
+
+
+        // Product with variant
+
         if (variant != null)
         {
             if (variant.Stock <= 0)
@@ -613,22 +797,43 @@ public class OrderService : IOrderService
                     $"{variant.Size} is out of stock.");
             }
 
+
             if (quantity > variant.Stock)
             {
                 throw new Exception(
                     $"Only {variant.Stock} available for " +
-                    $"{product.Name} ({variant.Size}).");
+                    $"{product.Name} " +
+                    $"({variant.Size}).");
             }
+
+
+            return;
+        }
+
+
+        // Product without variant
+
+        if (product.Stock <= 0)
+        {
+            throw new Exception(
+                $"{product.Name} is out of stock.");
+        }
+
+
+        if (quantity > product.Stock)
+        {
+            throw new Exception(
+                $"Only {product.Stock} available for " +
+                $"{product.Name}.");
         }
     }
 
 
-    // =====================================================
     // DELIVERY FEE
-    // =====================================================
 
-    private static decimal CalculateDeliveryFee(
-        decimal subtotal)
+    private static decimal
+        CalculateDeliveryFee(
+            decimal subtotal)
     {
         return subtotal < 499
             ? 100
@@ -636,27 +841,29 @@ public class OrderService : IOrderService
     }
 
 
-    // =====================================================
-    // PAYMENT STATUS
-    // =====================================================
+    // RECEIPT
 
-    private static string GetPaymentStatus(
-        string paymentMethod)
+    private static string
+        CreateReceipt(
+            string type,
+            int userId)
     {
-        return paymentMethod
-            .Trim()
-            .ToLowerInvariant() == "razorpay"
-                ? "Paid"
-                : "Pending";
+        var randomPart =
+            Guid.NewGuid()
+                .ToString("N")
+                .Substring(0, 16);
+
+        return $"{type}-{userId}-{randomPart}";
     }
 
 
     // =====================================================
-    // MAP TO RESPONSE DTO
+    // MAP ORDER
     // =====================================================
 
-    private static OrderResponseDto MapToDto(
-        Order order)
+    private static OrderResponseDto
+        MapToDto(
+            Order order)
     {
         return new OrderResponseDto
         {
@@ -700,7 +907,8 @@ public class OrderService : IOrderService
                 order.RazorpaySignature,
 
             Status =
-                order.Status.ToString(),
+                GetStatusText(
+                    order.Status),
 
             CreatedAt =
                 order.CreatedAt,
@@ -742,6 +950,36 @@ public class OrderService : IOrderService
                                     item.TotalPrice
                             })
                     .ToList()
+        };
+    }
+
+
+    private static string
+        GetStatusText(
+            OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.OrderPlaced =>
+                "Order Placed",
+
+            OrderStatus.Processing =>
+                "Processing",
+
+            OrderStatus.Shipped =>
+                "Shipped",
+
+            OrderStatus.OutForDelivery =>
+                "Out for Delivery",
+
+            OrderStatus.Delivered =>
+                "Delivered",
+
+            OrderStatus.Cancelled =>
+                "Cancelled",
+
+            _ =>
+                "Order Placed"
         };
     }
 }

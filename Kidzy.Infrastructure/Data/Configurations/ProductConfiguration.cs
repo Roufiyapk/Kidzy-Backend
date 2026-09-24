@@ -26,6 +26,10 @@ public class ProductConfiguration
             .IsRequired()
             .HasColumnType("decimal(18,2)");
 
+        builder.Property(x => x.Stock)
+            .IsRequired()
+            .HasDefaultValue(0);
+
         builder.Property(x => x.ImageUrl)
             .IsRequired()
             .HasMaxLength(500);

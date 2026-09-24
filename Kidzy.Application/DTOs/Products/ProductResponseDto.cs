@@ -10,6 +10,8 @@ public class ProductResponseDto
 
     public decimal Price { get; set; }
 
+    public int Stock { get; set; }
+
     public string ImageUrl { get; set; } = string.Empty;
 
     public bool BestSeller { get; set; }
@@ -18,9 +20,11 @@ public class ProductResponseDto
 
     public int CategoryId { get; set; }
 
-    public string CategoryName { get; set; } = string.Empty;
+    public string CategoryName { get; set; }
+        = string.Empty;
 
-    public string SubCategory { get; set; } = string.Empty;
+    public string SubCategory { get; set; }
+        = string.Empty;
 
     public List<ProductVariantDto> Variants { get; set; }
         = new();

@@ -10,23 +10,23 @@ public class Product
 
     public decimal Price { get; set; }
 
+    // Used for products without variants
+    public int Stock { get; set; }
+
     public string ImageUrl { get; set; } = string.Empty;
 
     public bool BestSeller { get; set; }
 
     public bool NewArrival { get; set; }
 
-    // Category
     public int CategoryId { get; set; }
 
     public Category Category { get; set; } = null!;
 
-    // SubCategory
     public int SubCategoryId { get; set; }
 
     public SubCategory SubCategory { get; set; } = null!;
 
-    // Variants
     public ICollection<ProductVariant> Variants { get; set; }
         = new List<ProductVariant>();
 }

@@ -6,6 +6,7 @@ using Kidzy.Application.Services;
 using Kidzy.Infrastructure.Authentication;
 using Kidzy.Infrastructure.Data;
 using Kidzy.Infrastructure.Data.Seed;
+using Kidzy.Infrastructure.Payment;
 using Kidzy.Infrastructure.Repositories;
 
 using Microsoft.EntityFrameworkCore;
@@ -93,6 +94,13 @@ public static class DependencyInjection
         services.AddScoped<
             IOrderService,
             OrderService>();
+
+
+        // RAZORPAY
+
+        services.AddHttpClient<
+            IRazorpayService,
+            RazorpayService>();
 
 
         // SEEDERS

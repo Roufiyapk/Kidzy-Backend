@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kidzy.Infrastructure.Repositories;
 
-public class OrderRepository : IOrderRepository
+public class OrderRepository
+    : IOrderRepository
 {
     private readonly ApplicationDbContext _context;
 
@@ -15,22 +16,27 @@ public class OrderRepository : IOrderRepository
         _context = context;
     }
 
-    // Get logged-in user's cart
 
-    public async Task<Cart?> GetCartAsync(
-        int userId)
+    // GET CART
+
+    public async Task<Cart?>
+        GetCartAsync(
+            int userId)
     {
         return await _context.Carts
+
             .Include(c => c.Items)
                 .ThenInclude(i => i.Product)
+
             .Include(c => c.Items)
                 .ThenInclude(i => i.ProductVariant)
+
             .FirstOrDefaultAsync(
                 c => c.UserId == userId);
     }
 
 
-    // Get product and variants
+    // GET PRODUCT + VARIANTS
 
     public async Task<Product?>
         GetProductWithVariantsAsync(
@@ -43,23 +49,33 @@ public class OrderRepository : IOrderRepository
     }
 
 
-    // Get all orders of current user
+    // USER ORDERS
 
     public async Task<List<Order>>
-        GetUserOrdersAsync(int userId)
+        GetUserOrdersAsync(
+            int userId)
     {
         return await _context.Orders
+
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+
             .Include(o => o.Items)
                 .ThenInclude(i => i.ProductVariant)
+
             .Where(o => o.UserId == userId)
+
             .OrderByDescending(
                 o => o.CreatedAt)
+
             .AsNoTracking()
+
             .ToListAsync();
     }
 
 
-    // Get one order of current user
+    
+    // SINGLE ORDER
 
     public async Task<Order?>
         GetUserOrderByIdAsync(
@@ -67,8 +83,13 @@ public class OrderRepository : IOrderRepository
             int orderId)
     {
         return await _context.Orders
+
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+
             .Include(o => o.Items)
                 .ThenInclude(i => i.ProductVariant)
+
             .FirstOrDefaultAsync(
                 o =>
                     o.UserId == userId &&
@@ -76,27 +97,45 @@ public class OrderRepository : IOrderRepository
     }
 
 
-    // Add order
+    // PAYMENT DUPLICATE CHECK
 
-    public async Task AddAsync(Order order)
+    public async Task<bool>
+        IsPaymentAlreadyUsedAsync(
+            string paymentId)
     {
-        await _context.Orders.AddAsync(order);
+        return await _context.Orders
+            .AnyAsync(
+                o =>
+                    o.RazorpayPaymentId ==
+                    paymentId);
     }
 
 
-    // Remove cart items
+    // ADD ORDER
+
+    public async Task AddAsync(
+        Order order)
+    {
+        await _context.Orders
+            .AddAsync(order);
+    }
+
+
+    // CLEAR CART
 
     public void RemoveCartItems(
         IEnumerable<CartItem> items)
     {
-        _context.CartItems.RemoveRange(items);
+        _context.CartItems
+            .RemoveRange(items);
     }
 
 
-    // Save
+    // SAVE
 
     public async Task SaveChangesAsync()
     {
-        await _context.SaveChangesAsync();
+        await _context
+            .SaveChangesAsync();
     }
 }

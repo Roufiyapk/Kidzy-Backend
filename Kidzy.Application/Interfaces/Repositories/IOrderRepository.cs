@@ -4,7 +4,8 @@ namespace Kidzy.Application.Interfaces.Repositories;
 
 public interface IOrderRepository
 {
-    Task<Cart?> GetCartAsync(int userId);
+    Task<Cart?> GetCartAsync(
+        int userId);
 
     Task<Product?> GetProductWithVariantsAsync(
         int productId);
@@ -16,7 +17,11 @@ public interface IOrderRepository
         int userId,
         int orderId);
 
-    Task AddAsync(Order order);
+    Task<bool> IsPaymentAlreadyUsedAsync(
+        string paymentId);
+
+    Task AddAsync(
+        Order order);
 
     void RemoveCartItems(
         IEnumerable<CartItem> items);
