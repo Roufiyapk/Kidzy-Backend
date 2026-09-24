@@ -5,11 +5,11 @@ using Kidzy.Domain.Enums;
 
 namespace Kidzy.Application.Services;
 
-public class AdminService : IAdminService
+public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
 
-    public AdminService(IUserRepository userRepository)
+    public UserService(IUserRepository userRepository)
     {
         _userRepository = userRepository;
     }

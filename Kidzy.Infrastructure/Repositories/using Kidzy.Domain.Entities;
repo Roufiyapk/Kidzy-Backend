@@ -1,0 +1,10 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Kidzy.Infrastructure.Repositories
+{
+    class using_Kidzy
+    {
+    }
+}

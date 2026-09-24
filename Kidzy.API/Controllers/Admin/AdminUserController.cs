@@ -1,25 +1,27 @@
-﻿using Kidzy.API.Contracts;
+﻿using System.Net;
+using Kidzy.API.Contracts;
 using Kidzy.Application.DTOs.Admin;
 using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Kidzy.API.Controllers;
+namespace Kidzy.API.Controllers.Admin;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/admin/users")]
 [Authorize(Roles = "Admin")]
-public class AdminController : ControllerBase
+public class AdminUserController : ControllerBase
 {
-    private readonly IAdminService _adminService;
+    private readonly IUserService _adminService;
 
-    public AdminController(
-        IAdminService adminService)
+    public AdminUserController(IUserService adminService)
     {
         _adminService = adminService;
     }
 
-    [HttpGet("users")]
+    // GET: api/admin/users
+
+    [HttpGet]
     public async Task<IActionResult> GetUsers()
     {
         try
@@ -28,25 +30,26 @@ public class AdminController : ControllerBase
                 await _adminService.GetUsersAsync();
 
             return Ok(
-                ApiResponse<IEnumerable<UserListDto>>
-                    .Success(
-                        users,
-                        "Users retrieved successfully."));
+                ApiResponse<IEnumerable<UserListDto>>.Success(
+                    users,
+                    "Users retrieved successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<IEnumerable<UserListDto>>
-                    .Fail(
-                        new List<string>
-                        {
-                            ex.Message
-                        },
-                        "Failed to retrieve users."));
+                ApiResponse<IEnumerable<UserListDto>>.Fail(
+                    new List<string>
+                    {
+                        ex.Message
+                    },
+                    "Failed to retrieve users."));
         }
     }
 
-    [HttpPut("users/{id}/block")]
+
+    // PUT: api/admin/users/5/block
+
+    [HttpPut("{id:int}/block")]
     public async Task<IActionResult> BlockUser(int id)
     {
         try
@@ -55,8 +58,8 @@ public class AdminController : ControllerBase
 
             return Ok(
                 ApiResponse<string>.Success(
-                    "User blocked successfully.",
-                    "Success"));
+                    string.Empty,
+                    "User blocked successfully."));
         }
         catch (Exception ex)
         {
@@ -70,7 +73,10 @@ public class AdminController : ControllerBase
         }
     }
 
-    [HttpPut("users/{id}/unblock")]
+
+    // PUT: api/admin/users/5/unblock
+
+    [HttpPut("{id:int}/unblock")]
     public async Task<IActionResult> UnblockUser(int id)
     {
         try
@@ -79,8 +85,8 @@ public class AdminController : ControllerBase
 
             return Ok(
                 ApiResponse<string>.Success(
-                    "User unblocked successfully.",
-                    "Success"));
+                    string.Empty,
+                    "User unblocked successfully."));
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Kidzy.Application.DTOs.Auth;
+using System.Text.RegularExpressions;
 
 namespace Kidzy.Application.Validators.Auth;
 
@@ -16,7 +17,7 @@ public class RegisterValidator : AbstractValidator<RegisterDto>
         RuleFor(x => x.Email)
             .NotEmpty()
             .WithMessage("Email is required.")
-            .EmailAddress()
+            .Must(BeValidEmail)
             .WithMessage("Enter a valid email address.")
             .MaximumLength(150)
             .WithMessage("Email cannot exceed 150 characters.");
@@ -26,5 +27,16 @@ public class RegisterValidator : AbstractValidator<RegisterDto>
             .WithMessage("Password is required.")
             .MinimumLength(8)
             .WithMessage("Password must contain at least 8 characters.");
+    }
+
+    private static bool BeValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        return Regex.IsMatch(
+            email,
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+        );
     }
 }

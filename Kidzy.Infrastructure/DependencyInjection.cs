@@ -2,10 +2,12 @@
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Application.Services;
+
 using Kidzy.Infrastructure.Authentication;
 using Kidzy.Infrastructure.Data;
 using Kidzy.Infrastructure.Data.Seed;
 using Kidzy.Infrastructure.Repositories;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,19 +20,44 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Database
+        // DATABASE
+
         services.AddDbContext<ApplicationDbContext>(
             options =>
                 options.UseSqlServer(
                     configuration.GetConnectionString(
                         "DefaultConnection")));
 
-        // Repositories
+
+        // REPOSITORIES
+
         services.AddScoped<
             IUserRepository,
             UserRepository>();
 
-        // Authentication
+        services.AddScoped<
+            ICategoryRepository,
+            CategoryRepository>();
+
+        services.AddScoped<
+            IProductRepository,
+            ProductRepository>();
+
+        services.AddScoped<
+            ICartRepository,
+            CartRepository>();
+
+        services.AddScoped<
+            IWishlistRepository,
+            WishlistRepository>();
+
+        services.AddScoped<
+            IOrderRepository,
+            OrderRepository>();
+
+
+        // APPLICATION SERVICES
+
         services.AddScoped<
             IPasswordHasher,
             PasswordHasher>();
@@ -39,17 +66,39 @@ public static class DependencyInjection
             IJwtService,
             JwtService>();
 
-        // Application Services
         services.AddScoped<
             IAuthService,
             AuthService>();
 
         services.AddScoped<
-            IAdminService,
-            AdminService>();
+            IUserService,
+            UserService>();
 
-        // Seed
+        services.AddScoped<
+            ICategoryService,
+            CategoryService>();
+
+        services.AddScoped<
+            IProductService,
+            ProductService>();
+
+        services.AddScoped<
+            ICartService,
+            CartService>();
+
+        services.AddScoped<
+            IWishlistService,
+            WishlistService>();
+
+        services.AddScoped<
+            IOrderService,
+            OrderService>();
+
+
+        // SEEDERS
+
         services.AddScoped<AdminSeeder>();
+
 
         return services;
     }

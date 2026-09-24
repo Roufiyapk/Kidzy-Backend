@@ -1,4 +1,6 @@
+using FluentValidation;
 using Kidzy.API.Extensions;
+using Kidzy.Application.Validators.Auth;
 using Kidzy.Infrastructure;
 using Kidzy.Infrastructure.Data;
 using Kidzy.Infrastructure.Data.Seed;
@@ -7,18 +9,22 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers
+// SERVICES
+
 builder.Services.AddControllers();
 
-// Infrastructure
+// FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterValidator>();
+
 builder.Services.AddInfrastructure(
     builder.Configuration);
 
-// JWT Authentication
 builder.Services.AddJwtAuthentication(
     builder.Configuration);
 
-// Swagger
+
+// SWAGGER
+
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
@@ -52,13 +58,14 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+
 var app = builder.Build();
 
 
-// Apply migrations and seed Admin
+// DATABASE + SEEDING
+
 using (var scope = app.Services.CreateScope())
 {
-    // Get DbContext
     var dbContext =
         scope.ServiceProvider
             .GetRequiredService<ApplicationDbContext>();
@@ -66,17 +73,23 @@ using (var scope = app.Services.CreateScope())
     // Apply migrations
     await dbContext.Database.MigrateAsync();
 
-    // Get AdminSeeder
+
+    // Create Admin
     var adminSeeder =
         scope.ServiceProvider
             .GetRequiredService<AdminSeeder>();
 
-    // Create Admin if it doesn't exist
     await adminSeeder.SeedAsync();
+
+
+    // Create Categories + SubCategories
+    await CategorySeeder.SeedAsync(
+        dbContext);
 }
 
 
-// Swagger
+// SWAGGER
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -84,9 +97,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+
+// MIDDLEWARE
+
 app.UseHttpsRedirection();
 
-// JWT Authentication
 app.UseAuthentication();
 
 app.UseAuthorization();
