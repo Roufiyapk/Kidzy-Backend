@@ -31,6 +31,7 @@ public static class DependencyInjection
 
 
         // REPOSITORIES
+        
 
         services.AddScoped<
             IUserRepository,
@@ -52,9 +53,15 @@ public static class DependencyInjection
             IWishlistRepository,
             WishlistRepository>();
 
+        // User Order Repository
         services.AddScoped<
             IOrderRepository,
             OrderRepository>();
+
+        // Admin Order Repository
+        services.AddScoped<
+            IAdminOrderRepository,
+            AdminOrderRepository>();
 
 
         // APPLICATION SERVICES
@@ -91,9 +98,15 @@ public static class DependencyInjection
             IWishlistService,
             WishlistService>();
 
+        // User Order Service
         services.AddScoped<
             IOrderService,
             OrderService>();
+
+        // Admin Order Service
+        services.AddScoped<
+            IAdminOrderService,
+            AdminOrderService>();
 
 
         // RAZORPAY
