@@ -31,7 +31,6 @@ public static class DependencyInjection
 
 
         // REPOSITORIES
-        
 
         services.AddScoped<
             IUserRepository,
@@ -62,6 +61,11 @@ public static class DependencyInjection
         services.AddScoped<
             IAdminOrderRepository,
             AdminOrderRepository>();
+
+        // Review Repository
+        services.AddScoped<
+            IReviewRepository,
+            ReviewRepository>();
 
 
         // APPLICATION SERVICES
@@ -107,6 +111,11 @@ public static class DependencyInjection
         services.AddScoped<
             IAdminOrderService,
             AdminOrderService>();
+
+        // Review Service
+        services.AddScoped<
+            IReviewService,
+            ReviewService>();
 
 
         // RAZORPAY
