@@ -11,6 +11,9 @@ public interface IProductService
     Task<List<ProductResponseDto>>
         GetByCategoryAsync(int categoryId);
 
+    Task<List<ProductResponseDto>>
+        SearchAsync(string query);
+
     Task<ProductResponseDto>
         CreateAsync(CreateProductDto dto);
 

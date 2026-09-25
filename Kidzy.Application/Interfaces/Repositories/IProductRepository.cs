@@ -11,6 +11,9 @@ public interface IProductRepository
     Task<List<Product>> GetByCategoryAsync(
         int categoryId);
 
+    Task<List<Product>> SearchAsync(
+        string query);
+
     Task AddAsync(Product product);
 
     Task UpdateAsync(Product product);

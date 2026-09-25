@@ -17,6 +17,7 @@ public class ProductController : ControllerBase
         _service = service;
     }
 
+
     // Get all products
 
     [HttpGet]
@@ -111,6 +112,47 @@ public class ProductController : ControllerBase
                         ex.Message
                     },
                     "Failed to retrieve products."));
+        }
+    }
+
+
+    // Search products
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest(
+                ApiResponse<List<ProductResponseDto>>.Fail(
+                    new List<string>
+                    {
+                        "Search query is required."
+                    },
+                    "Search failed."));
+        }
+
+        try
+        {
+            var products =
+                await _service
+                    .SearchAsync(query);
+
+            return Ok(
+                ApiResponse<List<ProductResponseDto>>.Success(
+                    products,
+                    "Search results retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<List<ProductResponseDto>>.Fail(
+                    new List<string>
+                    {
+                        ex.Message
+                    },
+                    "Failed to search products."));
         }
     }
 }

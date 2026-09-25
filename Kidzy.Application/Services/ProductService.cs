@@ -19,6 +19,9 @@ public class ProductService : IProductService
         _categoryRepository = categoryRepository;
     }
 
+
+    // GET ALL PRODUCTS
+
     public async Task<List<ProductResponseDto>>
         GetAllAsync()
     {
@@ -29,6 +32,9 @@ public class ProductService : IProductService
             .Select(MapToResponse)
             .ToList();
     }
+
+
+    // GET PRODUCT BY ID
 
     public async Task<ProductResponseDto?>
         GetByIdAsync(int id)
@@ -42,6 +48,9 @@ public class ProductService : IProductService
 
         return MapToResponse(product);
     }
+
+
+    // GET BY CATEGORY
 
     public async Task<List<ProductResponseDto>>
         GetByCategoryAsync(int categoryId)
@@ -61,6 +70,29 @@ public class ProductService : IProductService
             .Select(MapToResponse)
             .ToList();
     }
+
+
+    // SEARCH PRODUCTS
+
+    public async Task<List<ProductResponseDto>>
+        SearchAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new List<ProductResponseDto>();
+        }
+
+        var products =
+            await _productRepository
+                .SearchAsync(query.Trim());
+
+        return products
+            .Select(MapToResponse)
+            .ToList();
+    }
+
+
+    // CREATE
 
     public async Task<ProductResponseDto>
         CreateAsync(CreateProductDto dto)
@@ -162,6 +194,9 @@ public class ProductService : IProductService
 
         return MapToResponse(created);
     }
+
+
+    // UPDATE
 
     public async Task<ProductResponseDto?>
         UpdateAsync(
@@ -273,6 +308,9 @@ public class ProductService : IProductService
         return MapToResponse(updated);
     }
 
+
+    // DELETE
+
     public async Task<bool>
         DeleteAsync(int id)
     {
@@ -288,6 +326,9 @@ public class ProductService : IProductService
 
         return true;
     }
+
+
+    // VALIDATION
 
     private static void ValidateProduct(
         string name,
@@ -341,6 +382,9 @@ public class ProductService : IProductService
             }
         }
     }
+
+
+    // MAP TO RESPONSE DTO
 
     private static ProductResponseDto
         MapToResponse(Product product)
