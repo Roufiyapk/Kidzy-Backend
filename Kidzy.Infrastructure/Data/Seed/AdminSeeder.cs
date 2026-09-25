@@ -21,37 +21,102 @@ public class AdminSeeder
 
     public async Task SeedAsync()
     {
-        var adminName = _configuration["Admin:Name"];
-        var adminEmail = _configuration["Admin:Email"];
-        var adminPassword = _configuration["Admin:Password"];
+        // Fixed admin details
+        const string adminName = "Admin";
+        const string adminEmail = "admin@kidzy.com";
 
-        if (string.IsNullOrWhiteSpace(adminName) ||
-            string.IsNullOrWhiteSpace(adminEmail) ||
-            string.IsNullOrWhiteSpace(adminPassword))
+        // Admin password comes from User Secrets
+        var adminPassword =
+            _configuration["Admin:Password"];
+
+        if (string.IsNullOrWhiteSpace(adminPassword))
         {
             return;
         }
 
-        adminEmail = adminEmail.Trim().ToLowerInvariant();
+        var normalizedEmail =
+            adminEmail.Trim().ToLowerInvariant();
 
-        var existingAdmin = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == adminEmail);
+        // Check whether admin user already exists
+        var existingUser =
+            await _context.Users
+                .FirstOrDefaultAsync(
+                    u => u.Email == normalizedEmail);
 
-        if (existingAdmin != null)
+        var passwordHasher =
+            new PasswordHasher<User>();
+
+        // =====================================================
+        // USER ALREADY EXISTS
+        // =====================================================
+
+        if (existingUser != null)
         {
+            bool changed = false;
+
+            // Make sure this account is Admin
+            if (existingUser.Role != UserRole.Admin)
+            {
+                existingUser.Role = UserRole.Admin;
+                changed = true;
+            }
+
+            // Make sure admin is not blocked
+            if (existingUser.IsBlocked)
+            {
+                existingUser.IsBlocked = false;
+                changed = true;
+            }
+
+            // Make sure the configured admin password works
+            var passwordResult =
+                passwordHasher.VerifyHashedPassword(
+                    existingUser,
+                    existingUser.PasswordHash,
+                    adminPassword);
+
+            if (passwordResult ==
+                PasswordVerificationResult.Failed)
+            {
+                existingUser.PasswordHash =
+                    passwordHasher.HashPassword(
+                        existingUser,
+                        adminPassword);
+
+                changed = true;
+            }
+
+            if (!string.Equals(
+                    existingUser.Name,
+                    adminName,
+                    StringComparison.Ordinal))
+            {
+                existingUser.Name = adminName;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await _context.SaveChangesAsync();
+            }
+
             return;
         }
 
-        var passwordHasher = new PasswordHasher<User>();
+        // =====================================================
+        // CREATE ADMIN IF NOT EXISTS
+        // =====================================================
 
         var admin = new User
         {
-            Name = adminName.Trim(),
-            Email = adminEmail,
+            Name = adminName,
 
-            PasswordHash = passwordHasher.HashPassword(
-                null!,
-                adminPassword),
+            Email = normalizedEmail,
+
+            PasswordHash =
+                passwordHasher.HashPassword(
+                    null!,
+                    adminPassword),
 
             Role = UserRole.Admin,
 
