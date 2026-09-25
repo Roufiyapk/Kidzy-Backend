@@ -15,29 +15,22 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
+    // GET USER BY EMAIL
+
     public async Task<User?> GetByEmailAsync(
         string email)
     {
+        var normalizedEmail =
+            email.Trim().ToLowerInvariant();
+
         return await _context.Users
             .FirstOrDefaultAsync(
-                u => u.Email == email);
+                x =>
+                    x.Email.ToLower()
+                    == normalizedEmail);
     }
 
-    public async Task<User?> GetByIdAsync(
-        int id)
-    {
-        return await _context.Users
-            .FirstOrDefaultAsync(
-                u => u.Id == id);
-    }
-
-    public async Task<IEnumerable<User>>
-        GetAllAsync()
-    {
-        return await _context.Users
-            .AsNoTracking()
-            .ToListAsync();
-    }
+    // ADD USER
 
     public async Task<User> AddAsync(
         User user)
@@ -49,11 +42,48 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    public async Task UpdateAsync(
-        User user)
-    {
-        _context.Users.Update(user);
+    // GET ALL USERS
 
+    public async Task<List<User>> GetAllAsync()
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .OrderBy(x => x.Name)
+            .ToListAsync();
+    }
+
+    // GET USER BY ID
+
+    public async Task<User?> GetByIdAsync(
+        int id)
+    {
+        return await _context.Users
+            .FirstOrDefaultAsync(
+                x => x.Id == id);
+    }
+
+    // CHECK EMAIL EXISTS
+    // excludeUserId = current user
+
+    public async Task<bool> ExistsByEmailAsync(
+        string email,
+        int excludeUserId)
+    {
+        var normalizedEmail =
+            email.Trim().ToLowerInvariant();
+
+        return await _context.Users
+            .AnyAsync(
+                x =>
+                    x.Id != excludeUserId &&
+                    x.Email.ToLower()
+                    == normalizedEmail);
+    }
+
+    // SAVE CHANGES
+
+    public async Task SaveChangesAsync()
+    {
         await _context.SaveChangesAsync();
     }
 }
