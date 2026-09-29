@@ -46,9 +46,7 @@ public class CartService : ICartService
     }
 
 
-    // =====================================
     // ADD TO CART
-    // =====================================
 
     public async Task<CartItemDto>
         AddToCartAsync(
@@ -326,9 +324,7 @@ public class CartService : ICartService
     }
 
 
-    // =====================================
     // MAP ENTITY → DTO
-    // =====================================
 
     private static CartItemDto MapToDto(
         CartItem item)

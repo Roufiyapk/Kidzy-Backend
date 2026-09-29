@@ -42,7 +42,7 @@ public class ProductRepository : IProductRepository
     }
 
 
-    // GET BY CATEGORY
+    // GET PRODUCTS BY CATEGORY
 
     public async Task<List<Product>>
         GetByCategoryAsync(int categoryId)
@@ -70,17 +70,12 @@ public class ProductRepository : IProductRepository
             .Include(p => p.Variants)
             .Where(p =>
                 p.Name.Contains(query) ||
-
                 p.Description.Contains(query) ||
-
                 p.Category.Name.Contains(query) ||
-
                 p.SubCategory.Name.Contains(query) ||
-
                 p.Variants.Any(v =>
                     v.AgeGroup != null &&
                     v.AgeGroup.Contains(query)) ||
-
                 p.Variants.Any(v =>
                     v.Size != null &&
                     v.Size.Contains(query))
@@ -90,7 +85,7 @@ public class ProductRepository : IProductRepository
     }
 
 
-    // ADD
+    // ADD PRODUCT
 
     public async Task AddAsync(Product product)
     {
@@ -100,7 +95,7 @@ public class ProductRepository : IProductRepository
     }
 
 
-    // UPDATE
+    // UPDATE PRODUCT
 
     public async Task UpdateAsync(Product product)
     {
@@ -110,12 +105,39 @@ public class ProductRepository : IProductRepository
     }
 
 
-    // DELETE
+    // DELETE PRODUCT
 
     public async Task DeleteAsync(Product product)
     {
         _context.Products.Remove(product);
 
         await _context.SaveChangesAsync();
+    }
+
+
+    // GET ALL PRODUCTS WITH PRICE SORTING
+
+    public async Task<List<Product>>
+        GetAllAsync(string? sort)
+    {
+        var query = _context.Products
+            .Include(p => p.Category)
+            .Include(p => p.SubCategory)
+            .Include(p => p.Variants)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (sort == "price-low")
+        {
+            query = query
+                .OrderBy(p => p.Price);
+        }
+        else if (sort == "price-high")
+        {
+            query = query
+                .OrderByDescending(p => p.Price);
+        }
+
+        return await query.ToListAsync();
     }
 }

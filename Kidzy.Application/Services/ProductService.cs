@@ -11,6 +11,7 @@ public class ProductService : IProductService
 
     private readonly ICategoryRepository _categoryRepository;
 
+
     public ProductService(
         IProductRepository productRepository,
         ICategoryRepository categoryRepository)
@@ -20,7 +21,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // GET ALL PRODUCTS
+    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         GetAllAsync()
@@ -34,7 +37,25 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
+    // GET ALL PRODUCTS WITH PRICE SORTING
+    // ==========================================
+
+    public async Task<List<ProductResponseDto>>
+        GetAllAsync(string? sort)
+    {
+        var products =
+            await _productRepository.GetAllAsync(sort);
+
+        return products
+            .Select(MapToResponse)
+            .ToList();
+    }
+
+
+    // ==========================================
     // GET PRODUCT BY ID
+    // ==========================================
 
     public async Task<ProductResponseDto?>
         GetByIdAsync(int id)
@@ -50,7 +71,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // GET BY CATEGORY
+    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         GetByCategoryAsync(int categoryId)
@@ -72,7 +95,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // SEARCH PRODUCTS
+    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         SearchAsync(string query)
@@ -92,7 +117,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // CREATE
+    // ==========================================
 
     public async Task<ProductResponseDto>
         CreateAsync(CreateProductDto dto)
@@ -102,8 +129,10 @@ public class ProductService : IProductService
                 .GetByIdAsync(dto.CategoryId);
 
         if (category == null)
+        {
             throw new Exception(
                 "Category not found.");
+        }
 
         var subCategory =
             category.SubCategories
@@ -118,12 +147,14 @@ public class ProductService : IProductService
                 "SubCategory not found for this category.");
         }
 
+
         ValidateProduct(
             dto.Name,
             dto.Price,
             dto.Stock,
             dto.ImageUrl,
             dto.Variants);
+
 
         var product =
             new Product
@@ -157,12 +188,15 @@ public class ProductService : IProductService
                     dto.SubCategoryId
             };
 
-        foreach (var ageGroup
-                 in dto.Variants
-                    ?? new List<ProductVariantDto>())
+
+        foreach (
+            var ageGroup
+            in dto.Variants
+                ?? new List<ProductVariantDto>())
         {
-            foreach (var size
-                     in ageGroup.Sizes)
+            foreach (
+                var size
+                in ageGroup.Sizes)
             {
                 product.Variants.Add(
                     new ProductVariant
@@ -179,8 +213,10 @@ public class ProductService : IProductService
             }
         }
 
+
         await _productRepository
             .AddAsync(product);
+
 
         var created =
             await _productRepository
@@ -196,7 +232,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // UPDATE
+    // ==========================================
 
     public async Task<ProductResponseDto?>
         UpdateAsync(
@@ -210,6 +248,7 @@ public class ProductService : IProductService
         if (product == null)
             return null;
 
+
         var category =
             await _categoryRepository
                 .GetByIdAsync(dto.CategoryId);
@@ -219,6 +258,7 @@ public class ProductService : IProductService
             throw new Exception(
                 "Category not found.");
         }
+
 
         var subCategory =
             category.SubCategories
@@ -233,12 +273,14 @@ public class ProductService : IProductService
                 "SubCategory not found for this category.");
         }
 
+
         ValidateProduct(
             dto.Name,
             dto.Price,
             dto.Stock,
             dto.ImageUrl,
             dto.Variants);
+
 
         product.Name =
             dto.Name.Trim();
@@ -268,14 +310,18 @@ public class ProductService : IProductService
         product.SubCategoryId =
             dto.SubCategoryId;
 
+
         product.Variants.Clear();
 
-        foreach (var ageGroup
-                 in dto.Variants
-                    ?? new List<ProductVariantDto>())
+
+        foreach (
+            var ageGroup
+            in dto.Variants
+                ?? new List<ProductVariantDto>())
         {
-            foreach (var size
-                     in ageGroup.Sizes)
+            foreach (
+                var size
+                in ageGroup.Sizes)
             {
                 product.Variants.Add(
                     new ProductVariant
@@ -295,8 +341,10 @@ public class ProductService : IProductService
             }
         }
 
+
         await _productRepository
             .UpdateAsync(product);
+
 
         var updated =
             await _productRepository
@@ -309,7 +357,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // DELETE
+    // ==========================================
 
     public async Task<bool>
         DeleteAsync(int id)
@@ -328,7 +378,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // VALIDATION
+    // ==========================================
 
     private static void ValidateProduct(
         string name,
@@ -338,23 +390,36 @@ public class ProductService : IProductService
         List<ProductVariantDto>? variants)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             throw new Exception(
                 "Product name is required.");
+        }
+
 
         if (price <= 0)
+        {
             throw new Exception(
                 "Price must be greater than zero.");
+        }
+
 
         if (stock < 0)
+        {
             throw new Exception(
                 "Stock cannot be negative.");
+        }
+
 
         if (string.IsNullOrWhiteSpace(imageUrl))
+        {
             throw new Exception(
                 "Image URL is required.");
+        }
+
 
         if (variants == null)
             return;
+
 
         foreach (var ageGroup in variants)
         {
@@ -365,6 +430,7 @@ public class ProductService : IProductService
                     "Age group is required.");
             }
 
+
             foreach (var size in ageGroup.Sizes)
             {
                 if (string.IsNullOrWhiteSpace(
@@ -373,6 +439,7 @@ public class ProductService : IProductService
                     throw new Exception(
                         "Size is required.");
                 }
+
 
                 if (size.Stock < 0)
                 {
@@ -384,7 +451,9 @@ public class ProductService : IProductService
     }
 
 
+    // ==========================================
     // MAP TO RESPONSE DTO
+    // ==========================================
 
     private static ProductResponseDto
         MapToResponse(Product product)

@@ -1,8 +1,8 @@
-﻿using System.Net;
-using Kidzy.API.Contracts;
+﻿using Kidzy.API.Contracts;
 using Kidzy.Application.DTOs.Products;
 using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace Kidzy.API.Controllers.User;
 
@@ -12,44 +12,54 @@ public class ProductController : ControllerBase
 {
     private readonly IProductService _service;
 
-    public ProductController(IProductService service)
+    public ProductController(
+        IProductService service)
     {
         _service = service;
     }
 
 
-    // Get all products
+    // ==========================================
+    // GET ALL PRODUCTS
+    // OPTIONAL PRICE SORTING
+    // ==========================================
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? sort)
     {
         try
         {
             var products =
-                await _service.GetAllAsync();
+                await _service.GetAllAsync(sort);
 
             return Ok(
-                ApiResponse<List<ProductResponseDto>>.Success(
-                    products,
-                    "Products retrieved successfully."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Success(
+                        products,
+                        "Products retrieved successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<List<ProductResponseDto>>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to retrieve products."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to retrieve products."));
         }
     }
 
 
-    // Get product by ID
+    // ==========================================
+    // GET PRODUCT BY ID
+    // ==========================================
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(
+        int id)
     {
         try
         {
@@ -59,34 +69,39 @@ public class ProductController : ControllerBase
             if (product == null)
             {
                 return NotFound(
-                    ApiResponse<ProductResponseDto>.Fail(
-                        new List<string>
-                        {
-                            "Product not found."
-                        },
-                        "Product not found.",
-                        HttpStatusCode.NotFound));
+                    ApiResponse<ProductResponseDto>
+                        .Fail(
+                            new List<string>
+                            {
+                                "Product not found."
+                            },
+                            "Product not found.",
+                            HttpStatusCode.NotFound));
             }
 
             return Ok(
-                ApiResponse<ProductResponseDto>.Success(
-                    product,
-                    "Product retrieved successfully."));
+                ApiResponse<ProductResponseDto>
+                    .Success(
+                        product,
+                        "Product retrieved successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<ProductResponseDto>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to retrieve product."));
+                ApiResponse<ProductResponseDto>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to retrieve product."));
         }
     }
 
 
-    // Get products by category
+    // ==========================================
+    // GET PRODUCTS BY CATEGORY
+    // ==========================================
 
     [HttpGet("category/{categoryId:int}")]
     public async Task<IActionResult> GetByCategory(
@@ -99,24 +114,28 @@ public class ProductController : ControllerBase
                     .GetByCategoryAsync(categoryId);
 
             return Ok(
-                ApiResponse<List<ProductResponseDto>>.Success(
-                    products,
-                    "Products retrieved successfully."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Success(
+                        products,
+                        "Products retrieved successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<List<ProductResponseDto>>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to retrieve products."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to retrieve products."));
         }
     }
 
 
-    // Search products
+    // ==========================================
+    // SEARCH PRODUCTS
+    // ==========================================
 
     [HttpGet("search")]
     public async Task<IActionResult> Search(
@@ -125,34 +144,36 @@ public class ProductController : ControllerBase
         if (string.IsNullOrWhiteSpace(query))
         {
             return BadRequest(
-                ApiResponse<List<ProductResponseDto>>.Fail(
-                    new List<string>
-                    {
-                        "Search query is required."
-                    },
-                    "Search failed."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            "Search query is required."
+                        },
+                        "Search failed."));
         }
 
         try
         {
             var products =
-                await _service
-                    .SearchAsync(query);
+                await _service.SearchAsync(query);
 
             return Ok(
-                ApiResponse<List<ProductResponseDto>>.Success(
-                    products,
-                    "Search results retrieved successfully."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Success(
+                        products,
+                        "Search results retrieved successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<List<ProductResponseDto>>.Fail(
-                    new List<string>
-                    {
-                        ex.Message
-                    },
-                    "Failed to search products."));
+                ApiResponse<List<ProductResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to search products."));
         }
     }
 }

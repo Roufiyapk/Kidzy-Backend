@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Kidzy.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+61b6a65e20a6d033b54a5690e2a29f171566567f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+11c16c60ce3d66b114100f680b5698f13973cc19")]
 [assembly: System.Reflection.AssemblyProductAttribute("Kidzy.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Kidzy.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

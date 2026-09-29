@@ -47,7 +47,7 @@ public class AdminUserController : ControllerBase
     }
 
 
-    // PUT: api/admin/users/5/block
+    // PUT: api/admin/users/block
 
     [HttpPut("{id:int}/block")]
     public async Task<IActionResult> BlockUser(int id)
