@@ -1,0 +1,12 @@
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\bin\Debug\net10.0\Kidzy.Domain.deps.json
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\bin\Debug\net10.0\Kidzy.Domain.dll
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\bin\Debug\net10.0\Kidzy.Domain.pdb
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.AssemblyInfoInputs.cache
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.AssemblyInfo.cs
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.csproj.CoreCompileInputs.cache
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.dll
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\refint\Kidzy.Domain.dll
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.pdb
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\ref\Kidzy.Domain.dll
+C:\Users\MYBOOK\Desktop\.net\Kidzy\Kidzy.Domain\obj\Debug\net10.0\Kidzy.Domain.sourcelink.json

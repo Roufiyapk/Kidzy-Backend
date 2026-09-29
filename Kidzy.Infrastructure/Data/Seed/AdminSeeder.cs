@@ -1,6 +1,6 @@
-﻿using Kidzy.Domain.Entities;
+﻿using Kidzy.Application.Interfaces;
+using Kidzy.Domain.Entities;
 using Kidzy.Domain.Enums;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -10,13 +10,16 @@ public class AdminSeeder
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IPasswordHasher _passwordHasher;
 
     public AdminSeeder(
         ApplicationDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IPasswordHasher passwordHasher)
     {
         _context = context;
         _configuration = configuration;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task SeedAsync()
@@ -43,9 +46,6 @@ public class AdminSeeder
                 .FirstOrDefaultAsync(
                     u => u.Email == normalizedEmail);
 
-        var passwordHasher =
-            new PasswordHasher<User>();
-
         // USER ALREADY EXISTS
 
         if (existingUser != null)
@@ -67,23 +67,21 @@ public class AdminSeeder
             }
 
             // Make sure the configured admin password works
-            var passwordResult =
-                passwordHasher.VerifyHashedPassword(
-                    existingUser,
-                    existingUser.PasswordHash,
-                    adminPassword);
+            var passwordValid =
+                _passwordHasher.VerifyPassword(
+                    adminPassword,
+                    existingUser.PasswordHash);
 
-            if (passwordResult ==
-                PasswordVerificationResult.Failed)
+            if (!passwordValid)
             {
                 existingUser.PasswordHash =
-                    passwordHasher.HashPassword(
-                        existingUser,
+                    _passwordHasher.HashPassword(
                         adminPassword);
 
                 changed = true;
             }
 
+            // Make sure admin name is correct
             if (!string.Equals(
                     existingUser.Name,
                     adminName,
@@ -93,6 +91,7 @@ public class AdminSeeder
                 changed = true;
             }
 
+            // Save only if something changed
             if (changed)
             {
                 await _context.SaveChangesAsync();
@@ -110,8 +109,7 @@ public class AdminSeeder
             Email = normalizedEmail,
 
             PasswordHash =
-                passwordHasher.HashPassword(
-                    null!,
+                _passwordHasher.HashPassword(
                     adminPassword),
 
             Role = UserRole.Admin,
@@ -119,7 +117,9 @@ public class AdminSeeder
             IsBlocked = false,
 
             Phone = null,
+
             Address = null,
+
             Pincode = null
         };
 
