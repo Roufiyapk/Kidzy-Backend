@@ -8,7 +8,7 @@ public class PasswordHasher : IPasswordHasher
     private readonly PasswordHasher<object>
         _passwordHasher = new();
 
-    public string HashPassword(
+   public  string HashPassword(
         string password)
     {
         return _passwordHasher.HashPassword(

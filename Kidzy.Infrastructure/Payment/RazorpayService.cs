@@ -9,8 +9,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Kidzy.Infrastructure.Payment;
 
-public class RazorpayService
-    : IRazorpayService
+public class RazorpayService : IRazorpayService
 {
     private readonly HttpClient _httpClient;
 
@@ -18,29 +17,28 @@ public class RazorpayService
 
     private readonly string _keySecret;
 
+
     public RazorpayService(
         HttpClient httpClient,
         IConfiguration configuration)
     {
         _httpClient = httpClient;
 
-        _keyId =
-            configuration["Razorpay:KeyId"]
-            ?? string.Empty;
+        // Razorpay Key ID is directly defined here.
+        _keyId = "rzp_test_Tccu0sqVJJIGMl";
 
+        // Razorpay Key Secret comes from User Secrets.
         _keySecret =
             configuration["Razorpay:KeySecret"]
             ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(
-                _keyId))
+        if (string.IsNullOrWhiteSpace(_keyId))
         {
             throw new Exception(
                 "Razorpay KeyId is not configured.");
         }
 
-        if (string.IsNullOrWhiteSpace(
-                _keySecret))
+        if (string.IsNullOrWhiteSpace(_keySecret))
         {
             throw new Exception(
                 "Razorpay KeySecret is not configured.");
@@ -52,9 +50,7 @@ public class RazorpayService
     }
 
 
-    // ==========================================
     // CREATE RAZORPAY ORDER
-    // ==========================================
 
     public async Task<RazorpayOrderDto>
         CreateOrderAsync(
@@ -77,17 +73,13 @@ public class RazorpayService
         var body =
             new
             {
-                amount =
-                    amountInPaise,
+                amount = amountInPaise,
 
-                currency =
-                    "INR",
+                currency = "INR",
 
-                receipt =
-                    receipt,
+                receipt = receipt,
 
-                partial_payment =
-                    false
+                partial_payment = false
             };
 
         request.Content =
@@ -126,18 +118,15 @@ public class RazorpayService
 
         return new RazorpayOrderDto
         {
-            Id =
-                razorpayOrder.Id,
+            Id = razorpayOrder.Id,
 
-            Amount =
-                razorpayOrder.Amount,
+            Amount = razorpayOrder.Amount,
 
             Currency =
                 razorpayOrder.Currency
                 ?? "INR",
 
-            KeyId =
-                _keyId
+            KeyId = _keyId
         };
     }
 
@@ -163,6 +152,7 @@ public class RazorpayService
         }
 
 
+        // Get Razorpay order
         var razorpayOrder =
             await GetOrderAsync(
                 razorpayOrderId);
@@ -171,6 +161,7 @@ public class RazorpayService
             return false;
 
 
+        // Check receipt
         if (string.IsNullOrWhiteSpace(
                 razorpayOrder.Receipt))
         {
@@ -180,7 +171,6 @@ public class RazorpayService
 
         // Check order belongs to
         // this checkout/user prefix.
-
         if (!razorpayOrder.Receipt
                 .StartsWith(
                     expectedReceiptPrefix,
@@ -190,6 +180,7 @@ public class RazorpayService
         }
 
 
+        // Convert expected amount to paise
         var expectedAmountInPaise =
             Convert.ToInt64(
                 Math.Round(
@@ -197,6 +188,7 @@ public class RazorpayService
                     MidpointRounding.AwayFromZero));
 
 
+        // Check order amount
         if (razorpayOrder.Amount !=
             expectedAmountInPaise)
         {
@@ -204,6 +196,7 @@ public class RazorpayService
         }
 
 
+        // Get payment
         var payment =
             await GetPaymentAsync(
                 razorpayPaymentId);
@@ -212,6 +205,8 @@ public class RazorpayService
             return false;
 
 
+        // Check payment belongs
+        // to the Razorpay order
         if (!string.Equals(
                 payment.OrderId,
                 razorpayOrder.Id,
@@ -221,6 +216,7 @@ public class RazorpayService
         }
 
 
+        // Check payment amount
         if (payment.Amount !=
             expectedAmountInPaise)
         {
@@ -228,6 +224,7 @@ public class RazorpayService
         }
 
 
+        // Payment must be captured
         if (!string.Equals(
                 payment.Status,
                 "captured",
@@ -237,6 +234,7 @@ public class RazorpayService
         }
 
 
+        // Verify Razorpay signature
         return VerifySignature(
             razorpayOrder.Id,
             razorpayPaymentId,
@@ -360,7 +358,7 @@ public class RazorpayService
     }
 
 
-    // ORDER RESPONSE
+    // RAZORPAY ORDER RESPONSE
 
     private sealed class RazorpayOrderResponse
     {
@@ -368,18 +366,21 @@ public class RazorpayService
         public string Id { get; set; }
             = string.Empty;
 
+
         [JsonPropertyName("amount")]
         public long Amount { get; set; }
 
+
         [JsonPropertyName("currency")]
         public string? Currency { get; set; }
+
 
         [JsonPropertyName("receipt")]
         public string? Receipt { get; set; }
     }
 
 
-    // PAYMENT RESPONSE
+    // RAZORPAY PAYMENT RESPONSE
 
     private sealed class RazorpayPaymentResponse
     {
@@ -387,11 +388,14 @@ public class RazorpayService
         public string Id { get; set; }
             = string.Empty;
 
+
         [JsonPropertyName("order_id")]
         public string? OrderId { get; set; }
 
+
         [JsonPropertyName("amount")]
         public long Amount { get; set; }
+
 
         [JsonPropertyName("status")]
         public string? Status { get; set; }

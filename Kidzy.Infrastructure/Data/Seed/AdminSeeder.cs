@@ -46,9 +46,7 @@ public class AdminSeeder
         var passwordHasher =
             new PasswordHasher<User>();
 
-        // =====================================================
         // USER ALREADY EXISTS
-        // =====================================================
 
         if (existingUser != null)
         {
@@ -103,9 +101,7 @@ public class AdminSeeder
             return;
         }
 
-        // =====================================================
         // CREATE ADMIN IF NOT EXISTS
-        // =====================================================
 
         var admin = new User
         {
