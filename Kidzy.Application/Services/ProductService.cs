@@ -1,4 +1,6 @@
-﻿using Kidzy.Application.DTOs.Products;
+﻿using Microsoft.AspNetCore.Http;
+
+using Kidzy.Application.DTOs.Products;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
@@ -11,25 +13,30 @@ public class ProductService : IProductService
 
     private readonly ICategoryRepository _categoryRepository;
 
+    private readonly ICloudinaryService _cloudinaryService;
+
 
     public ProductService(
         IProductRepository productRepository,
-        ICategoryRepository categoryRepository)
+        ICategoryRepository categoryRepository,
+        ICloudinaryService cloudinaryService)
     {
         _productRepository = productRepository;
+
         _categoryRepository = categoryRepository;
+
+        _cloudinaryService = cloudinaryService;
     }
 
 
-    // ==========================================
     // GET ALL PRODUCTS
-    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         GetAllAsync()
     {
         var products =
-            await _productRepository.GetAllAsync();
+            await _productRepository
+                .GetAllAsync();
 
         return products
             .Select(MapToResponse)
@@ -37,15 +44,14 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
     // GET ALL PRODUCTS WITH PRICE SORTING
-    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         GetAllAsync(string? sort)
     {
         var products =
-            await _productRepository.GetAllAsync(sort);
+            await _productRepository
+                .GetAllAsync(sort);
 
         return products
             .Select(MapToResponse)
@@ -53,9 +59,7 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
     // GET PRODUCT BY ID
-    // ==========================================
 
     public async Task<ProductResponseDto?>
         GetByIdAsync(int id)
@@ -65,15 +69,16 @@ public class ProductService : IProductService
                 .GetByIdAsync(id);
 
         if (product == null)
+        {
             return null;
+        }
 
         return MapToResponse(product);
     }
 
 
-    // ==========================================
+    
     // GET BY CATEGORY
-    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         GetByCategoryAsync(int categoryId)
@@ -83,7 +88,9 @@ public class ProductService : IProductService
                 .GetByIdAsync(categoryId);
 
         if (category == null)
+        {
             return new List<ProductResponseDto>();
+        }
 
         var products =
             await _productRepository
@@ -95,9 +102,7 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
     // SEARCH PRODUCTS
-    // ==========================================
 
     public async Task<List<ProductResponseDto>>
         SearchAsync(string query)
@@ -117,13 +122,15 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
-    // CREATE
-    // ==========================================
+    // CREATE PRODUCT
 
     public async Task<ProductResponseDto>
         CreateAsync(CreateProductDto dto)
     {
+        // ---------------------------------------------
+        // CHECK CATEGORY
+        // ---------------------------------------------
+
         var category =
             await _categoryRepository
                 .GetByIdAsync(dto.CategoryId);
@@ -134,12 +141,13 @@ public class ProductService : IProductService
                 "Category not found.");
         }
 
+
+        // CHECK SUB CATEGORY
+
         var subCategory =
             category.SubCategories
                 .FirstOrDefault(
-                    x =>
-                        x.Id ==
-                        dto.SubCategoryId);
+                    x => x.Id == dto.SubCategoryId);
 
         if (subCategory == null)
         {
@@ -148,13 +156,34 @@ public class ProductService : IProductService
         }
 
 
+        // VALIDATE PRODUCT
+
         ValidateProduct(
             dto.Name,
             dto.Price,
             dto.Stock,
-            dto.ImageUrl,
+            dto.Image,
             dto.Variants);
 
+
+        // ---------------------------------------------
+        // UPLOAD IMAGE TO CLOUDINARY
+        // ---------------------------------------------
+
+        if (dto.Image == null)
+        {
+            throw new Exception(
+                "Product image is required.");
+        }
+
+        var imageUrl =
+            await _cloudinaryService
+                .UploadImageAsync(dto.Image);
+
+
+        // ---------------------------------------------
+        // CREATE PRODUCT
+        // ---------------------------------------------
 
         var product =
             new Product
@@ -173,7 +202,7 @@ public class ProductService : IProductService
                     dto.Stock,
 
                 ImageUrl =
-                    dto.ImageUrl.Trim(),
+                    imageUrl,
 
                 BestSeller =
                     dto.BestSeller,
@@ -189,10 +218,13 @@ public class ProductService : IProductService
             };
 
 
+        // ---------------------------------------------
+        // ADD VARIANTS
+        // ---------------------------------------------
+
         foreach (
             var ageGroup
-            in dto.Variants
-                ?? new List<ProductVariantDto>())
+            in dto.Variants)
         {
             foreach (
                 var size
@@ -214,9 +246,13 @@ public class ProductService : IProductService
         }
 
 
+        // SAVE PRODUCT
+
         await _productRepository
             .AddAsync(product);
 
+
+        // GET CREATED PRODUCT
 
         var created =
             await _productRepository
@@ -232,22 +268,26 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
-    // UPDATE
-    // ==========================================
+    // UPDATE PRODUCT
 
     public async Task<ProductResponseDto?>
         UpdateAsync(
             int id,
             UpdateProductDto dto)
     {
+        // GET EXISTING PRODUCT
+
         var product =
             await _productRepository
                 .GetByIdAsync(id);
 
         if (product == null)
+        {
             return null;
+        }
 
+
+        // CHECK CATEGORY
 
         var category =
             await _categoryRepository
@@ -260,12 +300,12 @@ public class ProductService : IProductService
         }
 
 
+        // CHECK SUB CATEGORY
+
         var subCategory =
             category.SubCategories
                 .FirstOrDefault(
-                    x =>
-                        x.Id ==
-                        dto.SubCategoryId);
+                    x => x.Id == dto.SubCategoryId);
 
         if (subCategory == null)
         {
@@ -274,13 +314,18 @@ public class ProductService : IProductService
         }
 
 
+        // VALIDATE PRODUCT
+
         ValidateProduct(
             dto.Name,
             dto.Price,
             dto.Stock,
-            dto.ImageUrl,
-            dto.Variants);
+            dto.Image,
+            dto.Variants,
+            requireImage: false);
 
+
+        // UPDATE BASIC DETAILS
 
         product.Name =
             dto.Name.Trim();
@@ -295,9 +340,6 @@ public class ProductService : IProductService
         product.Stock =
             dto.Stock;
 
-        product.ImageUrl =
-            dto.ImageUrl.Trim();
-
         product.BestSeller =
             dto.BestSeller;
 
@@ -311,13 +353,29 @@ public class ProductService : IProductService
             dto.SubCategoryId;
 
 
+        // UPDATE IMAGE IF NEW IMAGE IS PROVIDED
+
+        if (dto.Image != null)
+        {
+            var imageUrl =
+                await _cloudinaryService
+                    .UploadImageAsync(dto.Image);
+
+            product.ImageUrl =
+                imageUrl;
+        }
+
+
+        // REMOVE OLD VARIANTS
+
         product.Variants.Clear();
 
 
+        // ADD NEW VARIANTS
+
         foreach (
             var ageGroup
-            in dto.Variants
-                ?? new List<ProductVariantDto>())
+            in dto.Variants)
         {
             foreach (
                 var size
@@ -342,24 +400,28 @@ public class ProductService : IProductService
         }
 
 
+        // SAVE UPDATE
+
         await _productRepository
             .UpdateAsync(product);
 
+
+        // GET UPDATED PRODUCT
 
         var updated =
             await _productRepository
                 .GetByIdAsync(product.Id);
 
         if (updated == null)
+        {
             return null;
+        }
 
         return MapToResponse(updated);
     }
 
 
-    // ==========================================
-    // DELETE
-    // ==========================================
+    // DELETE PRODUCT
 
     public async Task<bool>
         DeleteAsync(int id)
@@ -369,7 +431,9 @@ public class ProductService : IProductService
                 .GetByIdAsync(id);
 
         if (product == null)
+        {
             return false;
+        }
 
         await _productRepository
             .DeleteAsync(product);
@@ -378,23 +442,26 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
     // VALIDATION
-    // ==========================================
 
     private static void ValidateProduct(
         string name,
         decimal price,
         int stock,
-        string imageUrl,
-        List<ProductVariantDto>? variants)
+        IFormFile? image,
+        List<CreateProductVariantDto> variants,
+        bool requireImage = true)
     {
+        // NAME
+
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new Exception(
                 "Product name is required.");
         }
 
+
+        // PRICE
 
         if (price <= 0)
         {
@@ -403,6 +470,8 @@ public class ProductService : IProductService
         }
 
 
+        // STOCK
+
         if (stock < 0)
         {
             throw new Exception(
@@ -410,15 +479,22 @@ public class ProductService : IProductService
         }
 
 
-        if (string.IsNullOrWhiteSpace(imageUrl))
+        // IMAGE
+
+        if (requireImage &&
+            (image == null || image.Length == 0))
         {
             throw new Exception(
-                "Image URL is required.");
+                "Product image is required.");
         }
 
 
+        // VARIANTS
+
         if (variants == null)
+        {
             return;
+        }
 
 
         foreach (var ageGroup in variants)
@@ -451,9 +527,7 @@ public class ProductService : IProductService
     }
 
 
-    // ==========================================
-    // MAP TO RESPONSE DTO
-    // ==========================================
+    // MAP ENTITY TO RESPONSE DTO
 
     private static ProductResponseDto
         MapToResponse(Product product)
@@ -497,7 +571,8 @@ public class ProductService : IProductService
 
             Variants =
                 product.Variants
-                    .GroupBy(v => v.AgeGroup)
+                    .GroupBy(
+                        v => v.AgeGroup)
                     .Select(
                         group =>
                             new ProductVariantDto

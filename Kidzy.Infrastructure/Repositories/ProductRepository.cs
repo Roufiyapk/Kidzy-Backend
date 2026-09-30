@@ -124,8 +124,7 @@ public class ProductRepository : IProductRepository
             .Include(p => p.Category)
             .Include(p => p.SubCategory)
             .Include(p => p.Variants)
-            .AsNoTracking()
-            .AsQueryable();
+            .AsNoTracking();
 
         if (sort == "price-low")
         {

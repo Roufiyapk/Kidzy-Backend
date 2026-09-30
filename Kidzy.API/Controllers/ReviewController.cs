@@ -7,7 +7,7 @@ using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Kidzy.API.Controllers.User;
+namespace Kidzy.API.Controllers;
 
 [ApiController]
 [Route("api/reviews")]

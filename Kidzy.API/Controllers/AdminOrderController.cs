@@ -5,7 +5,7 @@ using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Kidzy.API.Controllers.Admin;
+namespace Kidzy.API.Controllers;
 
 [ApiController]
 [Route("api/admin/orders")]
@@ -161,10 +161,8 @@ public class AdminOrderController
     }
 
 
-    // =====================================================
     // CANCEL
     // PUT /api/admin/orders/{id}/cancel
-    // =====================================================
 
     [HttpPut("{id:int}/cancel")]
     public async Task<IActionResult>

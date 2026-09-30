@@ -25,7 +25,9 @@ public class RazorpayService : IRazorpayService
         _httpClient = httpClient;
 
         // Razorpay Key ID is directly defined here.
-        _keyId = "rzp_test_Tccu0sqVJJIGMl";
+        _keyId =
+         configuration["Razorpay:KeyId"]
+         ?? string.Empty;
 
         // Razorpay Key Secret comes from User Secrets.
         _keySecret =

@@ -4,7 +4,7 @@ using Kidzy.Application.DTOs.Categories;
 using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Kidzy.API.Controllers.User;
+namespace Kidzy.API.Controllers;
 
 [ApiController]
 [Route("api/categories")]

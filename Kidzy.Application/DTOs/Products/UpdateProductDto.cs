@@ -1,4 +1,6 @@
-﻿namespace Kidzy.Application.DTOs.Products;
+﻿using Microsoft.AspNetCore.Http;
+
+namespace Kidzy.Application.DTOs.Products;
 
 public class UpdateProductDto
 {
@@ -10,7 +12,7 @@ public class UpdateProductDto
 
     public int Stock { get; set; }
 
-    public string ImageUrl { get; set; } = string.Empty;
+    public IFormFile? Image { get; set; }
 
     public bool BestSeller { get; set; }
 
@@ -20,5 +22,6 @@ public class UpdateProductDto
 
     public int SubCategoryId { get; set; }
 
-    public List<ProductVariantDto>? Variants { get; set; }
+    public List<CreateProductVariantDto> Variants { get; set; }
+        = new();
 }
