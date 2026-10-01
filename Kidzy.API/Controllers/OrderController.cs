@@ -2,7 +2,6 @@
 using System.Security.Claims;
 
 using Kidzy.API.Contracts;
-using Kidzy.Application.DTOs.Admin;
 using Kidzy.Application.DTOs.Orders;
 using Kidzy.Application.Interfaces.Services;
 

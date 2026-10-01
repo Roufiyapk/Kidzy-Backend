@@ -1,5 +1,4 @@
-﻿using Kidzy.Application.DTOs.Admin;
-using Kidzy.Application.DTOs.Orders;
+﻿using Kidzy.Application.DTOs.Orders;
 
 namespace Kidzy.Application.Interfaces.Services;
 

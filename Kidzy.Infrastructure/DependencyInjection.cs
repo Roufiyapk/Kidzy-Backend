@@ -125,6 +125,16 @@ public static class DependencyInjection
             IWishlistService,
             WishlistService>();
 
+        // ADMIN DASHBOARD
+
+        services.AddScoped<
+            IDashboardRepository,
+            DashboardRepository>();
+
+        services.AddScoped<
+            IDashboardService,
+            DashboardService>();
+
 
         // ORDER
         // User + Admin
@@ -139,6 +149,16 @@ public static class DependencyInjection
             IReviewService,
             ReviewService>();
 
+
+        // ADMIN DASHBOARD
+
+        services.AddScoped<
+            IDashboardRepository,
+            DashboardRepository>();
+
+        services.AddScoped<
+            IDashboardService,
+            DashboardService>();
 
         // CLOUDINARY
 

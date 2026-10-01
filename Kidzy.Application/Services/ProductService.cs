@@ -298,9 +298,7 @@ public class ProductService : IProductService
     }
 
 
-    // =====================================================
     // CREATE PRODUCT
-    // =====================================================
 
     public async Task<ProductResponseDto>
         CreateAsync(

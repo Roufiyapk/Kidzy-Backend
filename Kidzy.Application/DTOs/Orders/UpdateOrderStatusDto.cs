@@ -1,4 +1,4 @@
-﻿namespace Kidzy.Application.DTOs.Admin;
+﻿namespace Kidzy.Application.DTOs.Orders;
 
 public class UpdateOrderStatusDto
 {

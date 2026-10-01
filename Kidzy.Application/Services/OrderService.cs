@@ -1,5 +1,4 @@
-﻿using Kidzy.Application.DTOs.Admin;
-using Kidzy.Application.DTOs.Orders;
+﻿using Kidzy.Application.DTOs.Orders;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 
@@ -100,10 +99,8 @@ public class OrderService
     }
 
 
-    // =====================================================
     // USER
     // CANCEL ORDER
-    // =====================================================
 
     public async Task<OrderResponseDto?>
         CancelOrderAsync(

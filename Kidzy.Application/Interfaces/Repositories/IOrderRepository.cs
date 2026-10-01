@@ -5,7 +5,6 @@ namespace Kidzy.Application.Interfaces.Repositories;
 
 public interface IOrderRepository
 {
-    // USER
 
     Task<Order?>
         GetOrderByIdAsync(
@@ -16,26 +15,22 @@ public interface IOrderRepository
             int userId);
 
 
-    // ADMIN
 
     Task<List<Order>>
         GetAllOrdersAsync(
             OrderStatus? status = null);
 
 
-    // CREATE
 
     Task AddAsync(
         Order order);
 
 
-    // DELETE
 
     void Delete(
         Order order);
 
 
-    // SAVE
 
     Task SaveChangesAsync();
 }
