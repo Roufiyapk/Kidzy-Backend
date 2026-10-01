@@ -1,5 +1,4 @@
-﻿using Kidzy.Application.Interfaces;
-using Kidzy.Application.Interfaces.Services;
+﻿using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;

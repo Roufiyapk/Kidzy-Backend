@@ -1,30 +1,41 @@
 ﻿using Kidzy.Domain.Entities;
+using Kidzy.Domain.Enums;
 
 namespace Kidzy.Application.Interfaces.Repositories;
 
 public interface IOrderRepository
 {
-    Task<Cart?> GetCartAsync(
-        int userId);
+    // USER
 
-    Task<Product?> GetProductWithVariantsAsync(
-        int productId);
+    Task<Order?>
+        GetOrderByIdAsync(
+            int orderId);
 
-    Task<List<Order>> GetUserOrdersAsync(
-        int userId);
+    Task<List<Order>>
+        GetUserOrdersAsync(
+            int userId);
 
-    Task<Order?> GetUserOrderByIdAsync(
-        int userId,
-        int orderId);
 
-    Task<bool> IsPaymentAlreadyUsedAsync(
-        string paymentId);
+    // ADMIN
+
+    Task<List<Order>>
+        GetAllOrdersAsync(
+            OrderStatus? status = null);
+
+
+    // CREATE
 
     Task AddAsync(
         Order order);
 
-    void RemoveCartItems(
-        IEnumerable<CartItem> items);
+
+    // DELETE
+
+    void Delete(
+        Order order);
+
+
+    // SAVE
 
     Task SaveChangesAsync();
 }

@@ -1,4 +1,4 @@
-﻿using Kidzy.Application.Interfaces;
+﻿using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
 using Kidzy.Domain.Enums;
 using Microsoft.EntityFrameworkCore;

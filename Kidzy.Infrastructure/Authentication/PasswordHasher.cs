@@ -1,4 +1,4 @@
-﻿using Kidzy.Application.Interfaces;
+﻿using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Identity;
 
 namespace Kidzy.Infrastructure.Authentication;

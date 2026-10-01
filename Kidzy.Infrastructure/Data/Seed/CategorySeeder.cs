@@ -13,6 +13,7 @@ public static class CategorySeeder
 
         var categories = new List<Category>
         {
+            // GIRLS
             new Category
             {
                 Name = "Girls",
@@ -21,11 +22,13 @@ public static class CategorySeeder
                     new SubCategory { Name = "Dresses" },
                     new SubCategory { Name = "Tops" },
                     new SubCategory { Name = "Bottoms" },
+                    new SubCategory { Name = "Co-ord Sets" },
                     new SubCategory { Name = "Ethnic Wear" },
                     new SubCategory { Name = "Party Wear" }
                 }
             },
 
+            // BOYS
             new Category
             {
                 Name = "Boys",
@@ -34,11 +37,13 @@ public static class CategorySeeder
                     new SubCategory { Name = "T-Shirts" },
                     new SubCategory { Name = "Shirts" },
                     new SubCategory { Name = "Pants" },
+                    new SubCategory { Name = "Co-ord Sets" },
                     new SubCategory { Name = "Ethnic Wear" },
                     new SubCategory { Name = "Party Wear" }
                 }
             },
 
+            // TOYS
             new Category
             {
                 Name = "Toys",
@@ -51,6 +56,7 @@ public static class CategorySeeder
                 }
             },
 
+            // KIDS ACCESSORIES
             new Category
             {
                 Name = "Kids Accessories",
@@ -64,6 +70,7 @@ public static class CategorySeeder
                 }
             },
 
+            // SCHOOL SUPPLIES
             new Category
             {
                 Name = "School Supplies",
@@ -75,6 +82,7 @@ public static class CategorySeeder
                 }
             },
 
+            // FOOTWEAR
             new Category
             {
                 Name = "Footwear",
@@ -88,6 +96,7 @@ public static class CategorySeeder
                 }
             },
 
+            // BOOKS
             new Category
             {
                 Name = "Books",
@@ -100,16 +109,7 @@ public static class CategorySeeder
                 }
             },
 
-            new Category
-            {
-                Name = "Kids Care",
-                SubCategories =
-                {
-                    new SubCategory { Name = "Bath & Body" },
-                    new SubCategory { Name = "Personal Care" }
-                }
-            },
-
+            // ACTIVITIES
             new Category
             {
                 Name = "Activities",
@@ -119,6 +119,12 @@ public static class CategorySeeder
                     new SubCategory { Name = "DIY Kits" },
                     new SubCategory { Name = "Puzzles" }
                 }
+            },
+
+            // KIDS CARE
+            new Category
+            {
+                Name = "Kids Care"
             }
         };
 

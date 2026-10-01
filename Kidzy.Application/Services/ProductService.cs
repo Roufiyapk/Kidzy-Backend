@@ -1,19 +1,24 @@
 ﻿using Microsoft.AspNetCore.Http;
 
+using Kidzy.Application.Constants;
 using Kidzy.Application.DTOs.Products;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
+
 using Kidzy.Domain.Entities;
 
 namespace Kidzy.Application.Services;
 
 public class ProductService : IProductService
 {
-    private readonly IProductRepository _productRepository;
+    private readonly IProductRepository
+        _productRepository;
 
-    private readonly ICategoryRepository _categoryRepository;
+    private readonly ICategoryRepository
+        _categoryRepository;
 
-    private readonly ICloudinaryService _cloudinaryService;
+    private readonly ICloudinaryService
+        _cloudinaryService;
 
 
     public ProductService(
@@ -21,11 +26,14 @@ public class ProductService : IProductService
         ICategoryRepository categoryRepository,
         ICloudinaryService cloudinaryService)
     {
-        _productRepository = productRepository;
+        _productRepository =
+            productRepository;
 
-        _categoryRepository = categoryRepository;
+        _categoryRepository =
+            categoryRepository;
 
-        _cloudinaryService = cloudinaryService;
+        _cloudinaryService =
+            cloudinaryService;
     }
 
 
@@ -44,14 +52,174 @@ public class ProductService : IProductService
     }
 
 
-    // GET ALL PRODUCTS WITH PRICE SORTING
+    // GET PRODUCTS WITH FILTERS + SORTING
 
     public async Task<List<ProductResponseDto>>
-        GetAllAsync(string? sort)
+        GetAllAsync(
+            ProductFilterDto filter)
     {
         var products =
             await _productRepository
-                .GetAllAsync(sort);
+                .GetAllAsync();
+
+
+        // SUBCATEGORY FILTER
+
+        if (filter.SubCategoryId.HasValue)
+        {
+            products =
+                products
+                    .Where(p =>
+                        p.SubCategoryId ==
+                        filter.SubCategoryId.Value)
+                    .ToList();
+        }
+
+
+        // AGE FILTER
+
+        if (!string.IsNullOrWhiteSpace(
+                filter.Age))
+        {
+            if (!ProductFilterConstants.Ages
+                .Contains(filter.Age))
+            {
+                throw new Exception(
+                    "Invalid age filter.");
+            }
+
+
+            products =
+                products
+                    .Where(p =>
+                        p.Variants.Any(v =>
+                            v.AgeGroup ==
+                            filter.Age))
+                    .ToList();
+        }
+
+
+        // GENDER FILTER
+        
+
+        if (!string.IsNullOrWhiteSpace(
+                filter.Gender))
+        {
+            if (!ProductFilterConstants.Genders
+                .Contains(filter.Gender))
+            {
+                throw new Exception(
+                    "Invalid gender filter.");
+            }
+
+
+            products =
+                products
+                    .Where(p =>
+                        p.Category != null &&
+                        p.Category.Name
+                            .Equals(
+                                filter.Gender,
+                                StringComparison
+                                    .OrdinalIgnoreCase))
+                    .ToList();
+        }
+
+
+        // PRICE FILTER
+
+        if (!string.IsNullOrWhiteSpace(
+                filter.PriceRange))
+        {
+            if (!ProductFilterConstants.PriceRanges
+                .Contains(filter.PriceRange))
+            {
+                throw new Exception(
+                    "Invalid price range.");
+            }
+
+
+            products =
+                filter.PriceRange switch
+                {
+                    "Under500" =>
+                        products
+                            .Where(p =>
+                                p.Price < 500)
+                            .ToList(),
+
+
+                    "500To1000" =>
+                        products
+                            .Where(p =>
+                                p.Price >= 500 &&
+                                p.Price <= 1000)
+                            .ToList(),
+
+
+                    "1000To2000" =>
+                        products
+                            .Where(p =>
+                                p.Price > 1000 &&
+                                p.Price <= 2000)
+                            .ToList(),
+
+
+                    "Above2000" =>
+                        products
+                            .Where(p =>
+                                p.Price > 2000)
+                            .ToList(),
+
+
+                    _ =>
+                        products
+                };
+        }
+
+
+        // SORTING
+
+        if (!string.IsNullOrWhiteSpace(
+                filter.SortBy))
+        {
+            if (!ProductFilterConstants.SortOptions
+                .Contains(filter.SortBy))
+            {
+                throw new Exception(
+                    "Invalid sorting option.");
+            }
+
+
+            products =
+                filter.SortBy switch
+                {
+                    // Relevance
+                    "Relevance" =>
+                        products,
+
+
+                    // Price Low -> High
+                    "PriceLowToHigh" =>
+                        products
+                            .OrderBy(p =>
+                                p.Price)
+                            .ToList(),
+
+
+                    // Price High -> Low
+                    "PriceHighToLow" =>
+                        products
+                            .OrderByDescending(p =>
+                                p.Price)
+                            .ToList(),
+
+
+                    _ =>
+                        products
+                };
+        }
+
 
         return products
             .Select(MapToResponse)
@@ -62,7 +230,8 @@ public class ProductService : IProductService
     // GET PRODUCT BY ID
 
     public async Task<ProductResponseDto?>
-        GetByIdAsync(int id)
+        GetByIdAsync(
+            int id)
     {
         var product =
             await _productRepository
@@ -77,11 +246,11 @@ public class ProductService : IProductService
     }
 
 
-    
     // GET BY CATEGORY
 
     public async Task<List<ProductResponseDto>>
-        GetByCategoryAsync(int categoryId)
+        GetByCategoryAsync(
+            int categoryId)
     {
         var category =
             await _categoryRepository
@@ -92,9 +261,12 @@ public class ProductService : IProductService
             return new List<ProductResponseDto>();
         }
 
+
         var products =
             await _productRepository
-                .GetByCategoryAsync(categoryId);
+                .GetByCategoryAsync(
+                    categoryId);
+
 
         return products
             .Select(MapToResponse)
@@ -105,16 +277,20 @@ public class ProductService : IProductService
     // SEARCH PRODUCTS
 
     public async Task<List<ProductResponseDto>>
-        SearchAsync(string query)
+        SearchAsync(
+            string query)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
             return new List<ProductResponseDto>();
         }
 
+
         var products =
             await _productRepository
-                .SearchAsync(query.Trim());
+                .SearchAsync(
+                    query.Trim());
+
 
         return products
             .Select(MapToResponse)
@@ -122,18 +298,20 @@ public class ProductService : IProductService
     }
 
 
+    // =====================================================
     // CREATE PRODUCT
+    // =====================================================
 
     public async Task<ProductResponseDto>
-        CreateAsync(CreateProductDto dto)
+        CreateAsync(
+            CreateProductDto dto)
     {
-        // ---------------------------------------------
         // CHECK CATEGORY
-        // ---------------------------------------------
 
         var category =
             await _categoryRepository
-                .GetByIdAsync(dto.CategoryId);
+                .GetByIdAsync(
+                    dto.CategoryId);
 
         if (category == null)
         {
@@ -142,12 +320,14 @@ public class ProductService : IProductService
         }
 
 
-        // CHECK SUB CATEGORY
+        // CHECK SUBCATEGORY
 
         var subCategory =
             category.SubCategories
                 .FirstOrDefault(
-                    x => x.Id == dto.SubCategoryId);
+                    x =>
+                        x.Id ==
+                        dto.SubCategoryId);
 
         if (subCategory == null)
         {
@@ -166,9 +346,7 @@ public class ProductService : IProductService
             dto.Variants);
 
 
-        // ---------------------------------------------
-        // UPLOAD IMAGE TO CLOUDINARY
-        // ---------------------------------------------
+        // UPLOAD IMAGE
 
         if (dto.Image == null)
         {
@@ -176,14 +354,14 @@ public class ProductService : IProductService
                 "Product image is required.");
         }
 
+
         var imageUrl =
             await _cloudinaryService
-                .UploadImageAsync(dto.Image);
+                .UploadImageAsync(
+                    dto.Image);
 
 
-        // ---------------------------------------------
         // CREATE PRODUCT
-        // ---------------------------------------------
 
         var product =
             new Product
@@ -218,9 +396,7 @@ public class ProductService : IProductService
             };
 
 
-        // ---------------------------------------------
         // ADD VARIANTS
-        // ---------------------------------------------
 
         foreach (
             var ageGroup
@@ -234,10 +410,13 @@ public class ProductService : IProductService
                     new ProductVariant
                     {
                         AgeGroup =
-                            ageGroup.AgeGroup.Trim(),
+                            ageGroup
+                                .AgeGroup
+                                .Trim(),
 
                         Size =
-                            size.Size.Trim(),
+                            size.Size
+                                .Trim(),
 
                         Stock =
                             size.Stock
@@ -246,7 +425,7 @@ public class ProductService : IProductService
         }
 
 
-        // SAVE PRODUCT
+        // SAVE
 
         await _productRepository
             .AddAsync(product);
@@ -256,13 +435,15 @@ public class ProductService : IProductService
 
         var created =
             await _productRepository
-                .GetByIdAsync(product.Id);
+                .GetByIdAsync(
+                    product.Id);
 
         if (created == null)
         {
             throw new Exception(
                 "Product could not be created.");
         }
+
 
         return MapToResponse(created);
     }
@@ -291,7 +472,8 @@ public class ProductService : IProductService
 
         var category =
             await _categoryRepository
-                .GetByIdAsync(dto.CategoryId);
+                .GetByIdAsync(
+                    dto.CategoryId);
 
         if (category == null)
         {
@@ -300,12 +482,14 @@ public class ProductService : IProductService
         }
 
 
-        // CHECK SUB CATEGORY
+        // CHECK SUBCATEGORY
 
         var subCategory =
             category.SubCategories
                 .FirstOrDefault(
-                    x => x.Id == dto.SubCategoryId);
+                    x =>
+                        x.Id ==
+                        dto.SubCategoryId);
 
         if (subCategory == null)
         {
@@ -325,7 +509,7 @@ public class ProductService : IProductService
             requireImage: false);
 
 
-        // UPDATE BASIC DETAILS
+        // UPDATE DETAILS
 
         product.Name =
             dto.Name.Trim();
@@ -353,13 +537,14 @@ public class ProductService : IProductService
             dto.SubCategoryId;
 
 
-        // UPDATE IMAGE IF NEW IMAGE IS PROVIDED
+        // UPDATE IMAGE
 
         if (dto.Image != null)
         {
             var imageUrl =
                 await _cloudinaryService
-                    .UploadImageAsync(dto.Image);
+                    .UploadImageAsync(
+                        dto.Image);
 
             product.ImageUrl =
                 imageUrl;
@@ -388,10 +573,13 @@ public class ProductService : IProductService
                             product.Id,
 
                         AgeGroup =
-                            ageGroup.AgeGroup.Trim(),
+                            ageGroup
+                                .AgeGroup
+                                .Trim(),
 
                         Size =
-                            size.Size.Trim(),
+                            size.Size
+                                .Trim(),
 
                         Stock =
                             size.Stock
@@ -410,12 +598,14 @@ public class ProductService : IProductService
 
         var updated =
             await _productRepository
-                .GetByIdAsync(product.Id);
+                .GetByIdAsync(
+                    product.Id);
 
         if (updated == null)
         {
             return null;
         }
+
 
         return MapToResponse(updated);
     }
@@ -424,7 +614,8 @@ public class ProductService : IProductService
     // DELETE PRODUCT
 
     public async Task<bool>
-        DeleteAsync(int id)
+        DeleteAsync(
+            int id)
     {
         var product =
             await _productRepository
@@ -435,8 +626,10 @@ public class ProductService : IProductService
             return false;
         }
 
+
         await _productRepository
             .DeleteAsync(product);
+
 
         return true;
     }
@@ -482,7 +675,8 @@ public class ProductService : IProductService
         // IMAGE
 
         if (requireImage &&
-            (image == null || image.Length == 0))
+            (image == null ||
+             image.Length == 0))
         {
             throw new Exception(
                 "Product image is required.");
@@ -497,7 +691,9 @@ public class ProductService : IProductService
         }
 
 
-        foreach (var ageGroup in variants)
+        foreach (
+            var ageGroup
+            in variants)
         {
             if (string.IsNullOrWhiteSpace(
                     ageGroup.AgeGroup))
@@ -507,7 +703,9 @@ public class ProductService : IProductService
             }
 
 
-            foreach (var size in ageGroup.Sizes)
+            foreach (
+                var size
+                in ageGroup.Sizes)
             {
                 if (string.IsNullOrWhiteSpace(
                         size.Size))
@@ -527,10 +725,12 @@ public class ProductService : IProductService
     }
 
 
+    
     // MAP ENTITY TO RESPONSE DTO
 
     private static ProductResponseDto
-        MapToResponse(Product product)
+        MapToResponse(
+            Product product)
     {
         return new ProductResponseDto
         {
@@ -572,7 +772,8 @@ public class ProductService : IProductService
             Variants =
                 product.Variants
                     .GroupBy(
-                        v => v.AgeGroup)
+                        v =>
+                            v.AgeGroup)
                     .Select(
                         group =>
                             new ProductVariantDto

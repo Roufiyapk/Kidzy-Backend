@@ -1,6 +1,6 @@
 ﻿using Kidzy.Domain.Entities;
 
-namespace Kidzy.Application.Interfaces;
+namespace Kidzy.Application.Interfaces.Services;
 
 public interface IJwtService
 {

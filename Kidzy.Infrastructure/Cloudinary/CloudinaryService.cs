@@ -8,7 +8,7 @@ namespace Kidzy.Infrastructure.Cloudinary;
 
 public class CloudinaryService : ICloudinaryService
 {
-    private readonly Cloudinary _cloudinary;
+    private readonly CloudinaryDotNet.Cloudinary _cloudinary;
 
     public CloudinaryService(
         IConfiguration configuration)
@@ -22,41 +22,24 @@ public class CloudinaryService : ICloudinaryService
         var apiSecret =
             configuration["CloudinarySettings:ApiSecret"];
 
-        if (string.IsNullOrWhiteSpace(cloudName))
-        {
-            throw new Exception(
-                "Cloudinary CloudName is not configured.");
-        }
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new Exception(
-                "Cloudinary ApiKey is not configured.");
-        }
-
-        if (string.IsNullOrWhiteSpace(apiSecret))
-        {
-            throw new Exception(
-                "Cloudinary ApiSecret is not configured.");
-        }
-
         var account = new Account(
             cloudName,
             apiKey,
             apiSecret);
 
-        _cloudinary = new Cloudinary(account);
+        _cloudinary =
+            new CloudinaryDotNet.Cloudinary(account);
     }
-
 
     // UPLOAD IMAGE
 
     public async Task<string> UploadImageAsync(
         IFormFile image)
     {
-        if (image == null || image.Length == 0)
+        if (image == null ||
+            image.Length == 0)
         {
-            throw new Exception(
+            throw new ArgumentException(
                 "Image is required.");
         }
 
@@ -66,9 +49,10 @@ public class CloudinaryService : ICloudinaryService
         var uploadParams =
             new ImageUploadParams
             {
-                File = new FileDescription(
-                    image.FileName,
-                    stream),
+                File =
+                    new FileDescription(
+                        image.FileName,
+                        stream),
 
                 Folder = "kidzy/products"
             };
@@ -83,15 +67,8 @@ public class CloudinaryService : ICloudinaryService
                 result.Error.Message);
         }
 
-        if (result.SecureUrl == null)
-        {
-            throw new Exception(
-                "Cloudinary image URL not received.");
-        }
-
         return result.SecureUrl.ToString();
     }
-
 
     // DELETE IMAGE
 

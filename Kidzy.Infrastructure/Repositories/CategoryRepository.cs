@@ -15,6 +15,8 @@ public class CategoryRepository : ICategoryRepository
         _context = context;
     }
 
+    // GET ALL CATEGORIES
+
     public async Task<List<Category>> GetAllAsync()
     {
         return await _context.Categories
@@ -23,10 +25,26 @@ public class CategoryRepository : ICategoryRepository
             .ToListAsync();
     }
 
-    public async Task<Category?> GetByIdAsync(int id)
+
+    // GET CATEGORY BY ID
+
+    public async Task<Category?> GetByIdAsync(
+        int categoryId)
     {
         return await _context.Categories
             .Include(c => c.SubCategories)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .FirstOrDefaultAsync(
+                c => c.Id == categoryId);
+    }
+
+
+    // CHECK CATEGORY EXISTS
+
+    public async Task<bool> ExistsAsync(
+        int categoryId)
+    {
+        return await _context.Categories
+            .AnyAsync(
+                c => c.Id == categoryId);
     }
 }

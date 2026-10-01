@@ -1,4 +1,4 @@
-﻿namespace Kidzy.Application.Interfaces;
+﻿namespace Kidzy.Application.Interfaces.Services;
 
 public interface IPasswordHasher
 {

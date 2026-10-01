@@ -1,6 +1,8 @@
 ﻿using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Domain.Entities;
+using Kidzy.Domain.Enums;
 using Kidzy.Infrastructure.Data;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Kidzy.Infrastructure.Repositories;
@@ -10,6 +12,7 @@ public class OrderRepository
 {
     private readonly ApplicationDbContext _context;
 
+
     public OrderRepository(
         ApplicationDbContext context)
     {
@@ -17,39 +20,28 @@ public class OrderRepository
     }
 
 
-    // GET CART
+    // GET ONE ORDER
 
-    public async Task<Cart?>
-        GetCartAsync(
-            int userId)
+    public async Task<Order?>
+        GetOrderByIdAsync(
+            int orderId)
     {
-        return await _context.Carts
+        return await _context.Orders
 
-            .Include(c => c.Items)
+            .Include(o => o.User)
+
+            .Include(o => o.Items)
                 .ThenInclude(i => i.Product)
 
-            .Include(c => c.Items)
+            .Include(o => o.Items)
                 .ThenInclude(i => i.ProductVariant)
 
             .FirstOrDefaultAsync(
-                c => c.UserId == userId);
+                o => o.Id == orderId);
     }
 
 
-    // GET PRODUCT + VARIANTS
-
-    public async Task<Product?>
-        GetProductWithVariantsAsync(
-            int productId)
-    {
-        return await _context.Products
-            .Include(p => p.Variants)
-            .FirstOrDefaultAsync(
-                p => p.Id == productId);
-    }
-
-
-    // USER ORDERS
+    // GET USER ORDERS
 
     public async Task<List<Order>>
         GetUserOrdersAsync(
@@ -63,7 +55,8 @@ public class OrderRepository
             .Include(o => o.Items)
                 .ThenInclude(i => i.ProductVariant)
 
-            .Where(o => o.UserId == userId)
+            .Where(o =>
+                o.UserId == userId)
 
             .OrderByDescending(
                 o => o.CreatedAt)
@@ -74,40 +67,47 @@ public class OrderRepository
     }
 
 
-    
-    // SINGLE ORDER
+    // GET ALL ORDERS
+    // ADMIN
+   
 
-    public async Task<Order?>
-        GetUserOrderByIdAsync(
-            int userId,
-            int orderId)
+    public async Task<List<Order>>
+        GetAllOrdersAsync(
+            OrderStatus? status = null)
     {
-        return await _context.Orders
+        var query =
+            _context.Orders
 
-            .Include(o => o.Items)
-                .ThenInclude(i => i.Product)
+                .Include(o => o.User)
 
-            .Include(o => o.Items)
-                .ThenInclude(i => i.ProductVariant)
+                .Include(o => o.Items)
+                    .ThenInclude(i =>
+                        i.Product)
 
-            .FirstOrDefaultAsync(
-                o =>
-                    o.UserId == userId &&
-                    o.Id == orderId);
-    }
+                .Include(o => o.Items)
+                    .ThenInclude(i =>
+                        i.ProductVariant)
+
+                .AsQueryable();
 
 
-    // PAYMENT DUPLICATE CHECK
+        // STATUS FILTER
 
-    public async Task<bool>
-        IsPaymentAlreadyUsedAsync(
-            string paymentId)
-    {
-        return await _context.Orders
-            .AnyAsync(
-                o =>
-                    o.RazorpayPaymentId ==
-                    paymentId);
+        if (status.HasValue)
+        {
+            query = query.Where(
+                o => o.Status == status.Value);
+        }
+
+
+        return await query
+
+            .OrderByDescending(
+                o => o.CreatedAt)
+
+            .AsNoTracking()
+
+            .ToListAsync();
     }
 
 
@@ -121,21 +121,19 @@ public class OrderRepository
     }
 
 
-    // CLEAR CART
+    // DELETE ORDER
 
-    public void RemoveCartItems(
-        IEnumerable<CartItem> items)
+    public void Delete(
+        Order order)
     {
-        _context.CartItems
-            .RemoveRange(items);
+        _context.Orders.Remove(order);
     }
 
 
-    // SAVE
+    // SAVE CHANGES
 
     public async Task SaveChangesAsync()
     {
-        await _context
-            .SaveChangesAsync();
+        await _context.SaveChangesAsync();
     }
 }

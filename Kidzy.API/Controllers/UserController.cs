@@ -5,16 +5,16 @@ using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Kidzy.API.Controllers.Admin;
+namespace Kidzy.API.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
 [Authorize(Roles = "Admin")]
-public class AdminUserController : ControllerBase
+public class UserController : ControllerBase
 {
     private readonly IUserService _adminService;
 
-    public AdminUserController(IUserService adminService)
+    public UserController(IUserService adminService)
     {
         _adminService = adminService;
     }

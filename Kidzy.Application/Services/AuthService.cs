@@ -1,5 +1,4 @@
 ﻿using Kidzy.Application.DTOs.Auth;
-using Kidzy.Application.Interfaces;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;

@@ -1,7 +1,9 @@
 ﻿using System.Net;
+
 using Kidzy.API.Contracts;
 using Kidzy.Application.DTOs.Products;
 using Kidzy.Application.Interfaces.Services;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,6 +15,7 @@ public class ProductController : ControllerBase
 {
     private readonly IProductService _service;
 
+
     public ProductController(
         IProductService service)
     {
@@ -21,16 +24,16 @@ public class ProductController : ControllerBase
 
 
     // USER - GET ALL PRODUCTS
-    // OPTIONAL PRICE SORTING
+    // FILTER + SORTING
 
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] string? sort)
+        [FromQuery] ProductFilterDto filter)
     {
         try
         {
             var products =
-                await _service.GetAllAsync(sort);
+                await _service.GetAllAsync(filter);
 
             return Ok(
                 ApiResponse<List<ProductResponseDto>>
@@ -76,6 +79,7 @@ public class ProductController : ControllerBase
                             HttpStatusCode.NotFound));
             }
 
+
             return Ok(
                 ApiResponse<ProductResponseDto>
                     .Success(
@@ -106,7 +110,8 @@ public class ProductController : ControllerBase
         {
             var products =
                 await _service
-                    .GetByCategoryAsync(categoryId);
+                    .GetByCategoryAsync(
+                        categoryId);
 
             return Ok(
                 ApiResponse<List<ProductResponseDto>>
@@ -146,10 +151,12 @@ public class ProductController : ControllerBase
                         "Search failed."));
         }
 
+
         try
         {
             var products =
-                await _service.SearchAsync(query);
+                await _service
+                    .SearchAsync(query);
 
             return Ok(
                 ApiResponse<List<ProductResponseDto>>
@@ -171,7 +178,6 @@ public class ProductController : ControllerBase
     }
 
 
-    
     // ADMIN - CREATE PRODUCT
 
     [HttpPost]
@@ -183,7 +189,9 @@ public class ProductController : ControllerBase
         try
         {
             var product =
-                await _service.CreateAsync(dto);
+                await _service
+                    .CreateAsync(dto);
+
 
             return StatusCode(
                 (int)HttpStatusCode.Created,
@@ -220,9 +228,11 @@ public class ProductController : ControllerBase
         try
         {
             var product =
-                await _service.UpdateAsync(
-                    id,
-                    dto);
+                await _service
+                    .UpdateAsync(
+                        id,
+                        dto);
+
 
             if (product == null)
             {
@@ -236,6 +246,7 @@ public class ProductController : ControllerBase
                             "Product not found.",
                             HttpStatusCode.NotFound));
             }
+
 
             return Ok(
                 ApiResponse<ProductResponseDto>
@@ -267,7 +278,9 @@ public class ProductController : ControllerBase
         try
         {
             var deleted =
-                await _service.DeleteAsync(id);
+                await _service
+                    .DeleteAsync(id);
+
 
             if (!deleted)
             {
@@ -281,6 +294,7 @@ public class ProductController : ControllerBase
                             "Product not found.",
                             HttpStatusCode.NotFound));
             }
+
 
             return Ok(
                 ApiResponse<string>

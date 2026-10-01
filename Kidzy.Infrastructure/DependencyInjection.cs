@@ -1,5 +1,4 @@
-﻿using Kidzy.Application.Interfaces;
-using Kidzy.Application.Interfaces.Repositories;
+﻿using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Application.Services;
 
@@ -22,9 +21,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // =====================================================
         // DATABASE
-        // =====================================================
 
         services.AddDbContext<ApplicationDbContext>(
             options =>
@@ -33,44 +30,49 @@ public static class DependencyInjection
                         "DefaultConnection")));
 
 
-        // =====================================================
         // REPOSITORIES
-        // =====================================================
 
         // User
         services.AddScoped<
             IUserRepository,
             UserRepository>();
 
-        // Category
-        services.AddScoped<
-            ICategoryRepository,
-            CategoryRepository>();
+
 
         // Product
         services.AddScoped<
             IProductRepository,
             ProductRepository>();
 
+
         // Cart
         services.AddScoped<
             ICartRepository,
+
+
             CartRepository>();
+
+
+        // Category 
+
+        services.AddScoped<
+            ICategoryRepository,
+            CategoryRepository>();
+
 
         // Wishlist
         services.AddScoped<
             IWishlistRepository,
             WishlistRepository>();
 
-        // User Order
+
+        // ORDER
+        // User + Admin
+
         services.AddScoped<
             IOrderRepository,
             OrderRepository>();
 
-        // Admin Order
-        services.AddScoped<
-            IAdminOrderRepository,
-            AdminOrderRepository>();
 
         // Review
         services.AddScoped<
@@ -78,59 +80,59 @@ public static class DependencyInjection
             ReviewRepository>();
 
 
-        // =====================================================
         // APPLICATION SERVICES
-        // =====================================================
 
         // Password
         services.AddScoped<
             IPasswordHasher,
             PasswordHasher>();
 
+
         // JWT
         services.AddScoped<
             IJwtService,
             JwtService>();
+
 
         // Authentication
         services.AddScoped<
             IAuthService,
             AuthService>();
 
+
         // User
         services.AddScoped<
             IUserService,
             UserService>();
 
-        // Category
-        services.AddScoped<
-            ICategoryService,
-            CategoryService>();
+
+
 
         // Product
         services.AddScoped<
             IProductService,
             ProductService>();
 
+
         // Cart
         services.AddScoped<
             ICartService,
             CartService>();
+
 
         // Wishlist
         services.AddScoped<
             IWishlistService,
             WishlistService>();
 
-        // User Order
+
+        // ORDER
+        // User + Admin
+
         services.AddScoped<
             IOrderService,
             OrderService>();
 
-        // Admin Order
-        services.AddScoped<
-            IAdminOrderService,
-            AdminOrderService>();
 
         // Review
         services.AddScoped<
@@ -138,34 +140,25 @@ public static class DependencyInjection
             ReviewService>();
 
 
-        // =====================================================
         // CLOUDINARY
-        // =====================================================
 
         services.AddScoped<
             ICloudinaryService,
             CloudinaryService>();
 
 
-        // =====================================================
         // RAZORPAY
-        // =====================================================
 
         services.AddHttpClient<
             IRazorpayService,
             RazorpayService>();
 
 
-        // =====================================================
         // SEEDERS
-        // =====================================================
 
-        services.AddScoped<AdminSeeder>();
+        services.AddScoped<
+            AdminSeeder>();
 
-
-        // =====================================================
-        // RETURN SERVICES
-        // =====================================================
 
         return services;
     }

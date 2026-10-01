@@ -4,26 +4,58 @@ namespace Kidzy.Application.Interfaces.Services;
 
 public interface IProductService
 {
+    // GET ALL PRODUCTS
+
     Task<List<ProductResponseDto>>
-        GetAllAsync(string? sort);
+        GetAllAsync();
+
+
+    // GET PRODUCTS WITH FILTERS AND SORTING
+
+    Task<List<ProductResponseDto>>
+        GetAllAsync(
+            ProductFilterDto filter);
+
+
+    // GET PRODUCT BY ID
 
     Task<ProductResponseDto?>
-        GetByIdAsync(int id);
+        GetByIdAsync(
+            int id);
+
+
+    // GET BY CATEGORY
 
     Task<List<ProductResponseDto>>
-        GetByCategoryAsync(int categoryId);
+        GetByCategoryAsync(
+            int categoryId);
+
+
+    // SEARCH
 
     Task<List<ProductResponseDto>>
-        SearchAsync(string query);
+        SearchAsync(
+            string query);
+
+
+    // CREATE
 
     Task<ProductResponseDto>
-        CreateAsync(CreateProductDto dto);
+        CreateAsync(
+            CreateProductDto dto);
+
+
+    // UPDATE
 
     Task<ProductResponseDto?>
         UpdateAsync(
             int id,
             UpdateProductDto dto);
 
+
+    // DELETE
+
     Task<bool>
-        DeleteAsync(int id);
+        DeleteAsync(
+            int id);
 }
