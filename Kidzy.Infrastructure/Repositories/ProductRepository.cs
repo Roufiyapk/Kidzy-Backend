@@ -75,9 +75,6 @@ public class ProductRepository : IProductRepository
             .Where(p =>
                 p.Name.Contains(search) ||
 
-                (p.Description != null &&
-                 p.Description.Contains(search)) ||
-
                 (p.Category != null &&
                  p.Category.Name.Contains(search)) ||
 
@@ -141,20 +138,17 @@ public class ProductRepository : IProductRepository
         }
         else
         {
-            // By default, return active products.
             query = query.Where(p => !p.Deleted);
         }
 
         // SEARCH FILTER
+      
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             string search = filter.Search.Trim();
 
             query = query.Where(p =>
                 p.Name.Contains(search) ||
-
-                (p.Description != null &&
-                 p.Description.Contains(search)) ||
 
                 (p.Category != null &&
                  p.Category.Name.Contains(search)) ||

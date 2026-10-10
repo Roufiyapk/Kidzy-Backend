@@ -619,6 +619,16 @@ public class OrderService
         }
 
 
+        if (string.Equals(
+                order.PaymentStatus,
+                "Paid",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new Exception(
+                "Paid orders cannot be cancelled.");
+        }
+
+
         if (order.Status !=
                 OrderStatus.OrderPlaced &&
             order.Status !=
@@ -776,6 +786,14 @@ public class OrderService
                 newStatus;
         }
 
+        if (newStatus == OrderStatus.Delivered &&
+            string.Equals(
+                order.PaymentMethod,
+                "cod",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            order.PaymentStatus = "Paid";
+        }
 
         await _orderRepository
             .SaveChangesAsync();
@@ -1274,7 +1292,7 @@ public class OrderService
 
                                 // IMAGE FROM PRODUCT
                                 ImageUrl =
-                                    item.Product?.ImageUrl,
+                                    GetProductImageUrl(item.Product?.ImageUrl),
 
                                 AgeGroup =
                                     item.AgeGroup,
@@ -1390,7 +1408,7 @@ public class OrderService
 
                                 // IMAGE FROM PRODUCT
                                 ImageUrl =
-                                    item.Product?.ImageUrl,
+                                    GetProductImageUrl(item.Product?.ImageUrl),
 
                                 AgeGroup =
                                     item.AgeGroup,
@@ -1409,6 +1427,36 @@ public class OrderService
                             })
                     .ToList()
         };
+    }
+
+
+    private static string? GetProductImageUrl(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return null;
+        }
+
+        imageUrl = imageUrl.Trim();
+
+        if (imageUrl.StartsWith("["))
+        {
+            try
+            {
+                var imageUrls = System.Text.Json.JsonSerializer
+                    .Deserialize<List<string>>(imageUrl);
+
+                return imageUrls?
+                    .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url))
+                    ?.Trim();
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return null;
+            }
+        }
+
+        return imageUrl;
     }
 
 

@@ -1,4 +1,6 @@
-﻿using Kidzy.Application.DTOs.Reviews;
+﻿using System.Text.Json;
+
+using Kidzy.Application.DTOs.Reviews;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
@@ -17,29 +19,26 @@ public class ReviewService : IReviewService
 
     // CREATE REVIEW
 
-    public async Task<ReviewResponseDto>
-        CreateAsync(
-            int userId,
-            CreateReviewDto dto)
+    public async Task<ReviewResponseDto> CreateAsync(
+        int userId,
+        CreateReviewDto dto)
     {
-        // Check product
+        // Check whether the product exists
+
         var productExists =
-            await _reviewRepository
-                .ProductExistsAsync(
-                    dto.ProductId);
+            await _reviewRepository.ProductExistsAsync(
+                dto.ProductId);
 
         if (!productExists)
         {
-            throw new Exception(
-                "Product not found.");
+            throw new Exception("Product not found.");
         }
 
-        // Check duplicate review
+        // Check whether the user has already reviewed this product
         var alreadyReviewed =
-            await _reviewRepository
-                .HasUserReviewedProductAsync(
-                    userId,
-                    dto.ProductId);
+            await _reviewRepository.HasUserReviewedProductAsync(
+                userId,
+                dto.ProductId);
 
         if (alreadyReviewed)
         {
@@ -51,34 +50,27 @@ public class ReviewService : IReviewService
         var review = new Review
         {
             ProductId = dto.ProductId,
-
             UserId = userId,
-
             Rating = dto.Rating,
 
-            Title =
-                string.IsNullOrWhiteSpace(dto.Title)
-                    ? null
-                    : dto.Title.Trim(),
+            Title = string.IsNullOrWhiteSpace(dto.Title)
+                ? null
+                : dto.Title.Trim(),
 
-            Comment =
-                dto.Comment.Trim(),
+            Comment = dto.Comment.Trim(),
 
-            CreatedAt =
-                DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow
         };
 
-        await _reviewRepository
-            .AddAsync(review);
+        // Save review
+        await _reviewRepository.AddAsync(review);
 
-        await _reviewRepository
-            .SaveChangesAsync();
+        await _reviewRepository.SaveChangesAsync();
 
-        // Get created review
+        // Retrieve the created review
         var createdReview =
-            await _reviewRepository
-                .GetByIdAsync(
-                    review.Id);
+            await _reviewRepository.GetByIdAsync(
+                review.Id);
 
         if (createdReview == null)
         {
@@ -86,20 +78,17 @@ public class ReviewService : IReviewService
                 "Failed to retrieve created review.");
         }
 
-        return MapToDto(
-            createdReview);
+        return MapToDto(createdReview);
     }
 
-    // GET PRODUCT REVIEWS
+    // GET REVIEWS BY PRODUCT ID
 
-    public async Task<List<ReviewResponseDto>>
-        GetByProductIdAsync(
-            int productId)
+    public async Task<List<ReviewResponseDto>> GetByProductIdAsync(
+        int productId)
     {
         var reviews =
-            await _reviewRepository
-                .GetByProductIdAsync(
-                    productId);
+            await _reviewRepository.GetByProductIdAsync(
+                productId);
 
         return reviews
             .Select(MapToDto)
@@ -108,27 +97,23 @@ public class ReviewService : IReviewService
 
     // GET ALL REVIEWS
 
-    public async Task<List<ReviewResponseDto>>
-        GetAllAsync()
+    public async Task<List<ReviewResponseDto>> GetAllAsync()
     {
         var reviews =
-            await _reviewRepository
-                .GetAllAsync();
+            await _reviewRepository.GetAllAsync();
 
         return reviews
             .Select(MapToDto)
             .ToList();
     }
 
-    // GET HIGH RATED REVIEWS
+    // GET HIGH-RATED REVIEWS
     // RATING 4.5 OR ABOVE
 
-    public async Task<List<ReviewResponseDto>>
-        GetHighRatedAsync()
+    public async Task<List<ReviewResponseDto>> GetHighRatedAsync()
     {
         var reviews =
-            await _reviewRepository
-                .GetHighRatedAsync();
+            await _reviewRepository.GetHighRatedAsync();
 
         return reviews
             .Select(MapToDto)
@@ -137,69 +122,78 @@ public class ReviewService : IReviewService
 
     // DELETE REVIEW
 
-    public async Task<bool>
-        DeleteAsync(
-            int reviewId)
+    public async Task<bool> DeleteAsync(
+        int reviewId)
     {
         var review =
-            await _reviewRepository
-                .GetByIdAsync(
-                    reviewId);
+            await _reviewRepository.GetByIdAsync(
+                reviewId);
 
         if (review == null)
         {
             return false;
         }
 
-        _reviewRepository.Delete(
-            review);
+        _reviewRepository.Delete(review);
 
-        await _reviewRepository
-            .SaveChangesAsync();
+        await _reviewRepository.SaveChangesAsync();
 
         return true;
     }
 
-    // ENTITY -> DTO
+    
 
-    private static ReviewResponseDto
-        MapToDto(
-            Review review)
+    private static ReviewResponseDto MapToDto(
+        Review review)
     {
+        var imageUrl =
+            review.Product?.ImageUrl ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(imageUrl))
+        {
+            try
+            {
+                var parsedImages =
+                    JsonSerializer.Deserialize<string[]>(
+                        imageUrl);
+
+                if (parsedImages != null &&
+                    parsedImages.Length > 0)
+                {
+                    imageUrl =
+                        parsedImages.FirstOrDefault(
+                            image => !string.IsNullOrWhiteSpace(image))
+                        ?? string.Empty;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
         return new ReviewResponseDto
         {
-            Id =
-                review.Id,
+            Id = review.Id,
 
-            ProductId =
-                review.ProductId,
+            ProductId = review.ProductId,
 
-            UserId =
-                review.UserId,
+            UserId = review.UserId,
 
             UserName =
-                review.User?.Name ??
-                "Customer",
+                review.User?.Name ?? "Customer",
 
-            Rating =
-                review.Rating,
+            Rating = review.Rating,
 
-            Title =
-                review.Title,
+            Title = review.Title,
 
-            Comment =
-                review.Comment,
+            Comment = review.Comment,
 
             ProductName =
-                review.Product?.Name ??
-                string.Empty,
+                review.Product?.Name ?? string.Empty,
 
-            ProductImage =
-                review.Product?.ImageUrl ??
-                string.Empty,
+            ProductImage = imageUrl,
 
-            CreatedAt =
-                review.CreatedAt
+            CreatedAt = review.CreatedAt
         };
     }
 }
