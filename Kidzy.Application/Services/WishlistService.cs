@@ -2,6 +2,7 @@
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
+using System.Text.Json;
 
 namespace Kidzy.Application.Services;
 
@@ -12,16 +13,13 @@ public class WishlistService : IWishlistService
     public WishlistService(
         IWishlistRepository wishlistRepository)
     {
-        _wishlistRepository =
-            wishlistRepository;
+        _wishlistRepository = wishlistRepository;
     }
 
-    public async Task<WishlistResponseDto>
-        GetWishlistAsync(int userId)
+    public async Task<WishlistResponseDto> GetWishlistAsync(int userId)
     {
-        var wishlist =
-            await _wishlistRepository
-                .GetWishlistAsync(userId);
+        var wishlist = await _wishlistRepository
+            .GetWishlistAsync(userId);
 
         if (wishlist == null)
         {
@@ -37,111 +35,99 @@ public class WishlistService : IWishlistService
         };
     }
 
-    public async Task<WishlistItemDto>
-        AddToWishlistAsync(
-            int userId,
-            AddToWishlistDto dto)
+    public async Task<WishlistItemDto> AddToWishlistAsync(
+        int userId,
+        AddToWishlistDto dto)
     {
-        var product =
-            await _wishlistRepository
-                .GetProductAsync(
-                    dto.ProductId);
+        var product = await _wishlistRepository
+            .GetProductAsync(dto.ProductId);
 
         if (product == null)
         {
-            throw new Exception(
-                "Product not found.");
+            throw new Exception("Product not found.");
         }
 
-        var existingItem =
-            await _wishlistRepository
-                .GetWishlistItemAsync(
-                    userId,
-                    dto.ProductId);
+        var existingItem = await _wishlistRepository
+            .GetWishlistItemAsync(userId, dto.ProductId);
 
         if (existingItem != null)
         {
             return MapToDto(existingItem);
         }
 
-        var wishlist =
-            await _wishlistRepository
-                .GetWishlistAsync(userId);
+        var wishlist = await _wishlistRepository
+            .GetWishlistAsync(userId);
 
         if (wishlist == null)
         {
-            wishlist =
-                await _wishlistRepository
-                    .CreateWishlistAsync(userId);
+            wishlist = await _wishlistRepository
+                .CreateWishlistAsync(userId);
         }
 
-        var wishlistItem =
-            new WishlistItem
-            {
-                WishlistId = wishlist.Id,
-                ProductId = product.Id
-            };
+        var wishlistItem = new WishlistItem
+        {
+            WishlistId = wishlist.Id,
+            ProductId = product.Id,
+            Product = product
+        };
 
-        await _wishlistRepository
-            .AddItemAsync(wishlistItem);
+        await _wishlistRepository.AddItemAsync(wishlistItem);
 
-        await _wishlistRepository
-            .SaveChangesAsync();
-
-        wishlistItem.Product = product;
+        await _wishlistRepository.SaveChangesAsync();
 
         return MapToDto(wishlistItem);
     }
 
-    public async Task<bool>
-        RemoveFromWishlistAsync(
-            int userId,
-            int productId)
+    public async Task<bool> RemoveFromWishlistAsync(
+        int userId,
+        int productId)
     {
-        var item =
-            await _wishlistRepository
-                .GetWishlistItemAsync(
-                    userId,
-                    productId);
+        var item = await _wishlistRepository
+            .GetWishlistItemAsync(userId, productId);
 
         if (item == null)
         {
             return false;
         }
 
-        _wishlistRepository
-            .RemoveItem(item);
+        _wishlistRepository.RemoveItem(item);
 
-        await _wishlistRepository
-            .SaveChangesAsync();
+        await _wishlistRepository.SaveChangesAsync();
 
         return true;
     }
 
-    private static WishlistItemDto MapToDto(
-        WishlistItem item)
+    private static WishlistItemDto MapToDto(WishlistItem item)
     {
+        var imageUrl = item.Product.ImageUrl ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(imageUrl))
+        {
+            try
+            {
+                var parsedImages =
+                    JsonSerializer.Deserialize<string[]>(imageUrl);
+
+                if (parsedImages != null && parsedImages.Length > 0)
+                {
+                    imageUrl = parsedImages[0] ?? string.Empty;
+                }
+            }
+            catch (JsonException)
+            {
+                
+            }
+        }
+
         return new WishlistItemDto
         {
             Id = item.Id,
-
-            ProductId =
-                item.ProductId,
-
-            ProductName =
-                item.Product.Name,
-
-            Price =
-                item.Product.Price,
-
-            ImageUrl =
-                item.Product.ImageUrl,
-
-            BestSeller =
-                item.Product.BestSeller,
-
-            NewArrival =
-                item.Product.NewArrival
+            ProductId = item.ProductId,
+            ProductName = item.Product.Name,
+            Price = item.Product.Price,
+            ImageUrl = imageUrl,
+            BestSeller = item.Product.BestSeller,
+            NewArrival = item.Product.NewArrival
         };
     }
 }

@@ -269,30 +269,40 @@ public class CartService : ICartService
     }
 
     // MAP ENTITY TO DTO
-
     private static CartItemDto MapToDto(CartItem item)
     {
+        var imageUrl = item.Product.ImageUrl ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(imageUrl))
+        {
+            try
+            {
+                var parsedImages =
+                    System.Text.Json.JsonSerializer.Deserialize<string[]>(imageUrl);
+
+                if (parsedImages != null && parsedImages.Length > 0)
+                {
+                    imageUrl = parsedImages[0] ?? string.Empty;
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+            }
+        }
+
         return new CartItemDto
         {
             Id = item.Id,
-
             ProductId = item.ProductId,
-
             ProductVariantId = item.ProductVariantId,
-
             ProductName = item.Product.Name,
-
             Price = item.Product.Price,
-
-            ImageUrl = item.Product.ImageUrl ?? string.Empty,
-
+            ImageUrl = imageUrl,
             AgeGroup = item.ProductVariant?.AgeGroup,
-
             Size = item.ProductVariant?.Size,
-
             Quantity = item.Quantity,
-
             TotalPrice = item.Product.Price * item.Quantity
         };
     }
+
 }
