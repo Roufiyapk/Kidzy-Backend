@@ -1,4 +1,5 @@
-﻿using Kidzy.Domain.Entities;
+﻿using Kidzy.Application.DTOs.User;
+using Kidzy.Domain.Entities;
 
 namespace Kidzy.Application.Interfaces.Repositories;
 
@@ -9,6 +10,12 @@ public interface IUserRepository
     Task<User> AddAsync(User user);
 
     Task<List<User>> GetAllAsync();
+
+    Task<List<UserListDto>> GetUsersAsync(
+        string? search,
+        string? status,
+        int page,
+        int pageSize);
 
     Task<User?> GetByIdAsync(int id);
 

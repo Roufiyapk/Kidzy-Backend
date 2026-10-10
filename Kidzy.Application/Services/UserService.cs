@@ -1,5 +1,5 @@
-﻿using Kidzy.Application.DTOs.Admin;
-using Kidzy.Application.DTOs.Profile;
+﻿using Kidzy.Application.DTOs.Profile;
+using Kidzy.Application.DTOs.User;
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 using Kidzy.Domain.Entities;
@@ -17,17 +17,26 @@ public class UserService : IUserService
     }
 
     // ADMIN - GET USERS
+    // Search, status filter, sorting and pagination
+    // are handled by the repository/database.
 
-    public async Task<List<UserListDto>>
-        GetUsersAsync()
+    public async Task<List<UserListDto>> GetUsersAsync(
+        string? search,
+        string? status,
+        int page,
+        int pageSize)
     {
-        var users =
-            await _userRepository
-                .GetAllAsync();
+        if (page < 1)
+            page = 1;
 
-        return users
-            .Select(MapToUserListDto)
-            .ToList();
+        if (pageSize < 1)
+            pageSize = 5;
+
+        return await _userRepository.GetUsersAsync(
+            search,
+            status,
+            page,
+            pageSize);
     }
 
     // ADMIN - BLOCK USER
@@ -35,19 +44,14 @@ public class UserService : IUserService
     public async Task BlockUserAsync(int id)
     {
         var user =
-            await _userRepository
-                .GetByIdAsync(id);
+            await _userRepository.GetByIdAsync(id);
 
         if (user == null)
-        {
-            throw new Exception(
-                "User not found.");
-        }
+            throw new Exception("User not found.");
 
         user.IsBlocked = true;
 
-        await _userRepository
-            .SaveChangesAsync();
+        await _userRepository.SaveChangesAsync();
     }
 
     // ADMIN - UNBLOCK USER
@@ -55,67 +59,49 @@ public class UserService : IUserService
     public async Task UnblockUserAsync(int id)
     {
         var user =
-            await _userRepository
-                .GetByIdAsync(id);
+            await _userRepository.GetByIdAsync(id);
 
         if (user == null)
-        {
-            throw new Exception(
-                "User not found.");
-        }
+            throw new Exception("User not found.");
 
         user.IsBlocked = false;
 
-        await _userRepository
-            .SaveChangesAsync();
+        await _userRepository.SaveChangesAsync();
     }
 
     // PROFILE - GET
 
-    public async Task<ProfileResponseDto?>
-        GetProfileAsync(int userId)
+    public async Task<ProfileResponseDto?> GetProfileAsync(
+        int userId)
     {
         var user =
-            await _userRepository
-                .GetByIdAsync(userId);
+            await _userRepository.GetByIdAsync(userId);
 
         if (user == null)
-        {
             return null;
-        }
 
         return MapToProfileDto(user);
     }
 
     // PROFILE - UPDATE
 
-    public async Task<ProfileResponseDto>
-        UpdateProfileAsync(
-            int userId,
-            UpdateProfileDto dto)
+    public async Task<ProfileResponseDto> UpdateProfileAsync(
+        int userId,
+        UpdateProfileDto dto)
     {
         var user =
-            await _userRepository
-                .GetByIdAsync(userId);
+            await _userRepository.GetByIdAsync(userId);
 
         if (user == null)
-        {
-            throw new Exception(
-                "User not found.");
-        }
+            throw new Exception("User not found.");
 
-        // Normalize email
         var email =
-            dto.Email
-                .Trim()
-                .ToLowerInvariant();
+            dto.Email.Trim().ToLowerInvariant();
 
-        // Check duplicate email
         var emailExists =
-            await _userRepository
-                .ExistsByEmailAsync(
-                    email,
-                    userId);
+            await _userRepository.ExistsByEmailAsync(
+                email,
+                userId);
 
         if (emailExists)
         {
@@ -123,57 +109,34 @@ public class UserService : IUserService
                 "Email is already used by another account.");
         }
 
-        // Update name
-        user.Name =
-            dto.Name.Trim();
+        user.Name = dto.Name.Trim();
 
-        // Update email
-        user.Email =
-            email;
+        user.Email = email;
 
-        // Update phone
         user.Phone =
             string.IsNullOrWhiteSpace(dto.Phone)
                 ? null
                 : dto.Phone.Trim();
 
-        // Update saved address
         user.Address =
             string.IsNullOrWhiteSpace(dto.Address)
                 ? null
                 : dto.Address.Trim();
 
-        // Update pincode
         user.Pincode =
             string.IsNullOrWhiteSpace(dto.Pincode)
                 ? null
                 : dto.Pincode.Trim();
 
-        await _userRepository
-            .SaveChangesAsync();
+        await _userRepository.SaveChangesAsync();
 
         return MapToProfileDto(user);
     }
 
-    // ADMIN DTO MAPPING
+    // MAP USER TO PROFILE DTO
 
-    private static UserListDto
-        MapToUserListDto(User user)
-    {
-        return new UserListDto
-        {
-            Id = user.Id,
-            Name = user.Name,
-            Email = user.Email,
-            Role = user.Role.ToString(),
-            IsBlocked = user.IsBlocked
-        };
-    }
-
-    // PROFILE DTO MAPPING
-
-    private static ProfileResponseDto
-        MapToProfileDto(User user)
+    private static ProfileResponseDto MapToProfileDto(
+        User user)
     {
         return new ProfileResponseDto
         {

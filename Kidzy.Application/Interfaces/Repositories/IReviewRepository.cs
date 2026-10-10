@@ -22,6 +22,8 @@ public interface IReviewRepository
     Task AddAsync(
         Review review);
 
+    Task<List<Review>> GetHighRatedAsync();
+
     void Delete(
         Review review);
 

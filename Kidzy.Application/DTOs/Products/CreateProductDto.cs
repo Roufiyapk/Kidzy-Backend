@@ -12,7 +12,7 @@ public class CreateProductDto
 
     public int Stock { get; set; }
 
-    public IFormFile? Image { get; set; }
+    public List<IFormFile> Images { get; set; } = new();
 
     public bool BestSeller { get; set; }
 
@@ -20,8 +20,7 @@ public class CreateProductDto
 
     public int CategoryId { get; set; }
 
-    public int SubCategoryId { get; set; }
-
+    public int? SubCategoryId { get; set; }
     public List<CreateProductVariantDto> Variants { get; set; }
         = new();
 }

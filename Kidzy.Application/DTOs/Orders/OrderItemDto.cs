@@ -1,6 +1,4 @@
-﻿namespace Kidzy.Application.DTOs.Orders;
-
-public class OrderItemDto
+﻿public class OrderItemDto
 {
     public int Id { get; set; }
 
@@ -8,8 +6,9 @@ public class OrderItemDto
 
     public int? ProductVariantId { get; set; }
 
-    public string ProductName { get; set; }
-        = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+
+    public string? ImageUrl { get; set; }
 
     public string? AgeGroup { get; set; }
 

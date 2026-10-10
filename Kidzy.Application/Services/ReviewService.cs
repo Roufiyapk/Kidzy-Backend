@@ -77,7 +77,8 @@ public class ReviewService : IReviewService
         // Get created review
         var createdReview =
             await _reviewRepository
-                .GetByIdAsync(review.Id);
+                .GetByIdAsync(
+                    review.Id);
 
         if (createdReview == null)
         {
@@ -85,7 +86,8 @@ public class ReviewService : IReviewService
                 "Failed to retrieve created review.");
         }
 
-        return MapToDto(createdReview);
+        return MapToDto(
+            createdReview);
     }
 
     // GET PRODUCT REVIEWS
@@ -118,7 +120,21 @@ public class ReviewService : IReviewService
             .ToList();
     }
 
-    
+    // GET HIGH RATED REVIEWS
+    // RATING 4.5 OR ABOVE
+
+    public async Task<List<ReviewResponseDto>>
+        GetHighRatedAsync()
+    {
+        var reviews =
+            await _reviewRepository
+                .GetHighRatedAsync();
+
+        return reviews
+            .Select(MapToDto)
+            .ToList();
+    }
+
     // DELETE REVIEW
 
     public async Task<bool>
@@ -135,7 +151,8 @@ public class ReviewService : IReviewService
             return false;
         }
 
-        _reviewRepository.Delete(review);
+        _reviewRepository.Delete(
+            review);
 
         await _reviewRepository
             .SaveChangesAsync();
@@ -151,7 +168,8 @@ public class ReviewService : IReviewService
     {
         return new ReviewResponseDto
         {
-            Id = review.Id,
+            Id =
+                review.Id,
 
             ProductId =
                 review.ProductId,

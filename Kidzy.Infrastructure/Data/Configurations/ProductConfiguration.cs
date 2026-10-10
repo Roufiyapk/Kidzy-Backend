@@ -30,9 +30,13 @@ public class ProductConfiguration
             .IsRequired()
             .HasDefaultValue(0);
 
+        builder.Property(x => x.Gender)
+            .IsRequired(false)
+            .HasMaxLength(20);
+
         builder.Property(x => x.ImageUrl)
             .IsRequired()
-            .HasMaxLength(500);
+            .HasMaxLength(2000);
 
         builder.Property(x => x.BestSeller)
             .IsRequired();
@@ -44,7 +48,7 @@ public class ProductConfiguration
             .IsRequired();
 
         builder.Property(x => x.SubCategoryId)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.HasOne(x => x.Category)
             .WithMany(x => x.Products)
@@ -54,6 +58,7 @@ public class ProductConfiguration
         builder.HasOne(x => x.SubCategory)
             .WithMany(x => x.Products)
             .HasForeignKey(x => x.SubCategoryId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(x => x.Variants)

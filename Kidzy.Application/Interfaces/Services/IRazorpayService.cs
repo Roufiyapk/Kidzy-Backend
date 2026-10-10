@@ -1,10 +1,10 @@
-﻿using Kidzy.Application.DTOs.Orders;
+﻿using Kidzy.Application.DTOs.Payments;
 
 namespace Kidzy.Application.Interfaces.Services;
 
 public interface IRazorpayService
 {
-    Task<RazorpayOrderDto>
+    Task<RazorpayOrderResponseDto>
         CreateOrderAsync(
             decimal amount,
             string receipt);
@@ -13,7 +13,5 @@ public interface IRazorpayService
         VerifyPaymentAsync(
             string razorpayOrderId,
             string razorpayPaymentId,
-            string razorpaySignature,
-            decimal expectedAmount,
-            string expectedReceiptPrefix);
+            string razorpaySignature);
 }

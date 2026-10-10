@@ -2,6 +2,7 @@
 using System.Security.Claims;
 
 using Kidzy.API.Contracts;
+
 using Kidzy.Application.DTOs.Orders;
 using Kidzy.Application.Interfaces.Services;
 
@@ -12,10 +13,12 @@ namespace Kidzy.API.Controllers;
 
 [ApiController]
 [Route("api/orders")]
-public class OrderController : ControllerBase
+public class OrderController
+    : ControllerBase
 {
     private readonly IOrderService
         _orderService;
+
 
     public OrderController(
         IOrderService orderService)
@@ -26,12 +29,12 @@ public class OrderController : ControllerBase
 
 
     // USER
-    // CREATE ORDER
+    // POST /api/orders/cart
 
-    [HttpPost]
+    [HttpPost("cart")]
     [Authorize]
     public async Task<IActionResult>
-        CreateOrder(
+        CreateCartOrder(
             [FromBody]
             CreateOrderDto dto)
     {
@@ -40,22 +43,24 @@ public class OrderController : ControllerBase
             var userId =
                 GetUserId();
 
+
             var result =
                 await _orderService
                     .CreateOrderFromCartAsync(
                         userId,
                         dto);
 
+
             return Ok(
-                ApiResponse<CheckoutResponseDto>
+                ApiResponse<OrderResponseDto>
                     .Success(
                         result,
-                        "Order created successfully."));
+                        "Order placed successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<CheckoutResponseDto>
+                ApiResponse<OrderResponseDto>
                     .Fail(
                         new List<string>
                         {
@@ -67,12 +72,12 @@ public class OrderController : ControllerBase
 
 
     // USER
-    // BUY NOW
+    // POST /api/orders/buy-now
 
     [HttpPost("buy-now")]
     [Authorize]
     public async Task<IActionResult>
-        BuyNow(
+        CreateBuyNowOrder(
             [FromBody]
             BuyNowOrderDto dto)
     {
@@ -81,22 +86,24 @@ public class OrderController : ControllerBase
             var userId =
                 GetUserId();
 
+
             var result =
                 await _orderService
                     .CreateBuyNowOrderAsync(
                         userId,
                         dto);
 
+
             return Ok(
-                ApiResponse<CheckoutResponseDto>
+                ApiResponse<OrderResponseDto>
                     .Success(
                         result,
-                        "Order created successfully."));
+                        "Order placed successfully."));
         }
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<CheckoutResponseDto>
+                ApiResponse<OrderResponseDto>
                     .Fail(
                         new List<string>
                         {
@@ -108,7 +115,7 @@ public class OrderController : ControllerBase
 
 
     // USER
-    // MY ORDERS
+    // GET /api/orders/my-orders
 
     [HttpGet("my-orders")]
     [Authorize]
@@ -120,10 +127,12 @@ public class OrderController : ControllerBase
             var userId =
                 GetUserId();
 
+
             var orders =
                 await _orderService
                     .GetUserOrdersAsync(
                         userId);
+
 
             return Ok(
                 ApiResponse<List<OrderResponseDto>>
@@ -146,7 +155,7 @@ public class OrderController : ControllerBase
 
 
     // USER
-    // GET ONE ORDER
+    // GET /api/orders/{id}
 
     [HttpGet("{id:int}")]
     [Authorize]
@@ -159,11 +168,13 @@ public class OrderController : ControllerBase
             var userId =
                 GetUserId();
 
+
             var order =
                 await _orderService
                     .GetOrderByIdAsync(
                         userId,
                         id);
+
 
             if (order == null)
             {
@@ -200,7 +211,7 @@ public class OrderController : ControllerBase
 
 
     // USER
-    // CANCEL ORDER
+    // PUT /api/orders/{id}/cancel
 
     [HttpPut("{id:int}/cancel")]
     [Authorize]
@@ -213,11 +224,13 @@ public class OrderController : ControllerBase
             var userId =
                 GetUserId();
 
+
             var order =
                 await _orderService
                     .CancelOrderAsync(
                         userId,
                         id);
+
 
             if (order == null)
             {
@@ -254,18 +267,22 @@ public class OrderController : ControllerBase
 
 
     // ADMIN
-    // GET ALL ORDERS
+    // GET /api/orders/admin
 
     [HttpGet("admin")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult>
-        GetAllOrders()
+        GetAllOrders(
+            [FromQuery]
+            string? status = null)
     {
         try
         {
             var orders =
                 await _orderService
-                    .GetAllOrdersAsync();
+                    .GetAllOrdersAsync(
+                        status);
+
 
             return Ok(
                 ApiResponse<List<AdminOrderResponseDto>>
@@ -288,7 +305,7 @@ public class OrderController : ControllerBase
 
 
     // ADMIN
-    // GET ONE ORDER
+    // GET /api/orders/admin/{id}
 
     [HttpGet("admin/{id:int}")]
     [Authorize(Roles = "Admin")]
@@ -302,6 +319,7 @@ public class OrderController : ControllerBase
                 await _orderService
                     .GetAdminOrderByIdAsync(
                         id);
+
 
             if (order == null)
             {
@@ -338,7 +356,7 @@ public class OrderController : ControllerBase
 
 
     // ADMIN
-    // UPDATE STATUS
+    // PUT /api/orders/admin/{id}/status
 
     [HttpPut("admin/{id:int}/status")]
     [Authorize(Roles = "Admin")]
@@ -355,6 +373,7 @@ public class OrderController : ControllerBase
                     .UpdateStatusAsync(
                         id,
                         dto);
+
 
             if (order == null)
             {
@@ -391,7 +410,7 @@ public class OrderController : ControllerBase
 
 
     // ADMIN
-    // CANCEL
+    // PUT /api/orders/admin/{id}/cancel
 
     [HttpPut("admin/{id:int}/cancel")]
     [Authorize(Roles = "Admin")]
@@ -405,6 +424,7 @@ public class OrderController : ControllerBase
                 await _orderService
                     .CancelAdminOrderAsync(
                         id);
+
 
             if (order == null)
             {
@@ -441,7 +461,7 @@ public class OrderController : ControllerBase
 
 
     // ADMIN
-    // DELETE
+    // DELETE /api/orders/admin/{id}
 
     [HttpDelete("admin/{id:int}")]
     [Authorize(Roles = "Admin")]
@@ -455,6 +475,7 @@ public class OrderController : ControllerBase
                 await _orderService
                     .DeleteOrderAsync(
                         id);
+
 
             if (!deleted)
             {
@@ -490,7 +511,7 @@ public class OrderController : ControllerBase
     }
 
 
-    // GET USER ID FROM JWT
+    // JWT USER ID
 
     private int GetUserId()
     {
@@ -498,12 +519,24 @@ public class OrderController : ControllerBase
             User.FindFirstValue(
                 ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrEmpty(userId))
+
+        if (string.IsNullOrWhiteSpace(
+                userId))
         {
             throw new UnauthorizedAccessException(
                 "User ID not found in token.");
         }
 
-        return int.Parse(userId);
+
+        if (!int.TryParse(
+                userId,
+                out var parsedUserId))
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid user ID in token.");
+        }
+
+
+        return parsedUserId;
     }
 }

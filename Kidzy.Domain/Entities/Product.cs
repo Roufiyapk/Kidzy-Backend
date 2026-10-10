@@ -1,4 +1,6 @@
-﻿namespace Kidzy.Domain.Entities;
+﻿using System.Collections.Generic;
+
+namespace Kidzy.Domain.Entities;
 
 public class Product
 {
@@ -10,7 +12,6 @@ public class Product
 
     public decimal Price { get; set; }
 
-    // Used for products without variants
     public int Stock { get; set; }
 
     public string ImageUrl { get; set; } = string.Empty;
@@ -19,13 +20,17 @@ public class Product
 
     public bool NewArrival { get; set; }
 
+    public string? Gender { get; set; }
+
+    public bool Deleted { get; set; } = false;
+
     public int CategoryId { get; set; }
 
     public Category Category { get; set; } = null!;
 
-    public int SubCategoryId { get; set; }
+    public int? SubCategoryId { get; set; }
 
-    public SubCategory SubCategory { get; set; } = null!;
+    public SubCategory? SubCategory { get; set; }
 
     public ICollection<ProductVariant> Variants { get; set; }
         = new List<ProductVariant>();

@@ -1,6 +1,5 @@
-﻿using System.Net;
-using Kidzy.API.Contracts;
-using Kidzy.Application.DTOs.Admin;
+﻿using Kidzy.API.Contracts;
+using Kidzy.Application.DTOs.User;
 using Kidzy.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,14 +19,32 @@ public class UserController : ControllerBase
     }
 
     // GET: api/admin/users
-
+   
     [HttpGet]
-    public async Task<IActionResult> GetUsers()
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] string? search,
+        [FromQuery] string? status = "all",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 5)
     {
         try
         {
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize < 1)
+            {
+                pageSize = 5;
+            }
+
             var users =
-                await _adminService.GetUsersAsync();
+                await _adminService.GetUsersAsync(
+                    search,
+                    status,
+                    page,
+                    pageSize);
 
             return Ok(
                 ApiResponse<IEnumerable<UserListDto>>.Success(
@@ -46,8 +63,7 @@ public class UserController : ControllerBase
         }
     }
 
-
-    // PUT: api/admin/users/block
+    // PUT: api/admin/users/{id}/block
 
     [HttpPut("{id:int}/block")]
     public async Task<IActionResult> BlockUser(int id)
@@ -73,8 +89,7 @@ public class UserController : ControllerBase
         }
     }
 
-
-    // PUT: api/admin/users/5/unblock
+    // PUT: api/admin/users/{id}/unblock
 
     [HttpPut("{id:int}/unblock")]
     public async Task<IActionResult> UnblockUser(int id)

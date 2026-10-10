@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Text.Json;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 using Kidzy.Application.Constants;
 using Kidzy.Application.DTOs.Products;
+
 using Kidzy.Application.Interfaces.Repositories;
 using Kidzy.Application.Interfaces.Services;
 
@@ -52,178 +56,25 @@ public class ProductService : IProductService
     }
 
 
-    // GET PRODUCTS WITH FILTERS + SORTING
-
-    public async Task<List<ProductResponseDto>>
-        GetAllAsync(
-            ProductFilterDto filter)
+    // GET PRODUCTS WITH FILTERING, SORTING AND PAGINATION
+    public async Task<ProductPagedResponseDto> GetAllAsync(ProductFilterDto filter)
     {
-        var products =
-            await _productRepository
-                .GetAllAsync();
+        filter ??= new ProductFilterDto();
 
+        // Validate and normalize request values in the service layer.
+        NormalizeAndValidateProductFilters(filter);
 
-        // SUBCATEGORY FILTER
+        // Database filtering, sorting and pagination are handled by the repository.
+        var result = await _productRepository.GetFilteredAsync(filter);
 
-        if (filter.SubCategoryId.HasValue)
+        return new ProductPagedResponseDto
         {
-            products =
-                products
-                    .Where(p =>
-                        p.SubCategoryId ==
-                        filter.SubCategoryId.Value)
-                    .ToList();
-        }
-
-
-        // AGE FILTER
-
-        if (!string.IsNullOrWhiteSpace(
-                filter.Age))
-        {
-            if (!ProductFilterConstants.Ages
-                .Contains(filter.Age))
-            {
-                throw new Exception(
-                    "Invalid age filter.");
-            }
-
-
-            products =
-                products
-                    .Where(p =>
-                        p.Variants.Any(v =>
-                            v.AgeGroup ==
-                            filter.Age))
-                    .ToList();
-        }
-
-
-        // GENDER FILTER
-        
-
-        if (!string.IsNullOrWhiteSpace(
-                filter.Gender))
-        {
-            if (!ProductFilterConstants.Genders
-                .Contains(filter.Gender))
-            {
-                throw new Exception(
-                    "Invalid gender filter.");
-            }
-
-
-            products =
-                products
-                    .Where(p =>
-                        p.Category != null &&
-                        p.Category.Name
-                            .Equals(
-                                filter.Gender,
-                                StringComparison
-                                    .OrdinalIgnoreCase))
-                    .ToList();
-        }
-
-
-        // PRICE FILTER
-
-        if (!string.IsNullOrWhiteSpace(
-                filter.PriceRange))
-        {
-            if (!ProductFilterConstants.PriceRanges
-                .Contains(filter.PriceRange))
-            {
-                throw new Exception(
-                    "Invalid price range.");
-            }
-
-
-            products =
-                filter.PriceRange switch
-                {
-                    "Under500" =>
-                        products
-                            .Where(p =>
-                                p.Price < 500)
-                            .ToList(),
-
-
-                    "500To1000" =>
-                        products
-                            .Where(p =>
-                                p.Price >= 500 &&
-                                p.Price <= 1000)
-                            .ToList(),
-
-
-                    "1000To2000" =>
-                        products
-                            .Where(p =>
-                                p.Price > 1000 &&
-                                p.Price <= 2000)
-                            .ToList(),
-
-
-                    "Above2000" =>
-                        products
-                            .Where(p =>
-                                p.Price > 2000)
-                            .ToList(),
-
-
-                    _ =>
-                        products
-                };
-        }
-
-
-        // SORTING
-
-        if (!string.IsNullOrWhiteSpace(
-                filter.SortBy))
-        {
-            if (!ProductFilterConstants.SortOptions
-                .Contains(filter.SortBy))
-            {
-                throw new Exception(
-                    "Invalid sorting option.");
-            }
-
-
-            products =
-                filter.SortBy switch
-                {
-                    // Relevance
-                    "Relevance" =>
-                        products,
-
-
-                    // Price Low -> High
-                    "PriceLowToHigh" =>
-                        products
-                            .OrderBy(p =>
-                                p.Price)
-                            .ToList(),
-
-
-                    // Price High -> Low
-                    "PriceHighToLow" =>
-                        products
-                            .OrderByDescending(p =>
-                                p.Price)
-                            .ToList(),
-
-
-                    _ =>
-                        products
-                };
-        }
-
-
-        return products
-            .Select(MapToResponse)
-            .ToList();
+            Products = result.Products.Select(MapToResponse).ToList(),
+            CurrentPage = result.CurrentPage,
+            PageSize = result.PageSize,
+            TotalProducts = result.TotalProducts,
+            TotalPages = result.TotalPages
+        };
     }
 
 
@@ -246,7 +97,7 @@ public class ProductService : IProductService
     }
 
 
-    // GET BY CATEGORY
+    // GET PRODUCTS BY CATEGORY
 
     public async Task<List<ProductResponseDto>>
         GetByCategoryAsync(
@@ -254,7 +105,8 @@ public class ProductService : IProductService
     {
         var category =
             await _categoryRepository
-                .GetByIdAsync(categoryId);
+                .GetByIdAsync(
+                    categoryId);
 
         if (category == null)
         {
@@ -266,7 +118,6 @@ public class ProductService : IProductService
             await _productRepository
                 .GetByCategoryAsync(
                     categoryId);
-
 
         return products
             .Select(MapToResponse)
@@ -291,7 +142,6 @@ public class ProductService : IProductService
                 .SearchAsync(
                     query.Trim());
 
-
         return products
             .Select(MapToResponse)
             .ToList();
@@ -304,6 +154,23 @@ public class ProductService : IProductService
         CreateAsync(
             CreateProductDto dto)
     {
+        // CHECK DUPLICATE PRODUCT NAME
+        var normalizedName = dto.Name?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(normalizedName))
+        {
+            var duplicateExists = await _productRepository
+                .Query()
+                .AnyAsync(p =>
+                    p.Name.ToLower() == normalizedName.ToLower());
+
+            if (duplicateExists)
+            {
+                throw new InvalidOperationException(
+                    "A product with this name already exists.");
+            }
+        }
+
         // CHECK CATEGORY
 
         var category =
@@ -319,18 +186,33 @@ public class ProductService : IProductService
 
 
         // CHECK SUBCATEGORY
+        var hasSubCategories =
+            category.SubCategories != null &&
+            category.SubCategories.Any();
 
-        var subCategory =
-            category.SubCategories
-                .FirstOrDefault(
-                    x =>
-                        x.Id ==
-                        dto.SubCategoryId);
+        if (hasSubCategories)
+        {
+            if (!dto.SubCategoryId.HasValue)
+            {
+                throw new Exception(
+                    "Please select a subcategory for this category.");
+            }
 
-        if (subCategory == null)
+            var subCategory =
+                category.SubCategories!
+                    .FirstOrDefault(
+                        x => x.Id == dto.SubCategoryId.Value);
+
+            if (subCategory == null)
+            {
+                throw new Exception(
+                    "SubCategory not found for this category.");
+            }
+        }
+        else if (dto.SubCategoryId.HasValue)
         {
             throw new Exception(
-                "SubCategory not found for this category.");
+                "This category does not have subcategories. Do not select a subcategory.");
         }
 
 
@@ -340,23 +222,39 @@ public class ProductService : IProductService
             dto.Name,
             dto.Price,
             dto.Stock,
-            dto.Image,
+            dto.Images,
             dto.Variants);
 
 
-        // UPLOAD IMAGE
+        // UPLOAD ALL IMAGES TO CLOUDINARY
 
-        if (dto.Image == null)
+        var imageUrls =
+            new List<string>();
+
+        foreach (var image in dto.Images)
+        {
+            var uploadedUrl =
+                await _cloudinaryService
+                    .UploadImageAsync(
+                        image);
+
+            if (!string.IsNullOrWhiteSpace(uploadedUrl))
+            {
+                imageUrls.Add(uploadedUrl);
+            }
+        }
+
+        if (imageUrls.Count == 0)
         {
             throw new Exception(
-                "Product image is required.");
+                "Product image upload failed.");
         }
 
 
-        var imageUrl =
-            await _cloudinaryService
-                .UploadImageAsync(
-                    dto.Image);
+
+        var imageUrl = imageUrls[0];
+        var storedImageUrls =
+            JsonSerializer.Serialize(imageUrls);
 
 
         // CREATE PRODUCT
@@ -378,7 +276,7 @@ public class ProductService : IProductService
                     dto.Stock,
 
                 ImageUrl =
-                    imageUrl,
+                    storedImageUrls,
 
                 BestSeller =
                     dto.BestSeller,
@@ -390,7 +288,10 @@ public class ProductService : IProductService
                     dto.CategoryId,
 
                 SubCategoryId =
-                    dto.SubCategoryId
+                    hasSubCategories ? dto.SubCategoryId : null,
+
+                Deleted =
+                    false
             };
 
 
@@ -481,18 +382,33 @@ public class ProductService : IProductService
 
 
         // CHECK SUBCATEGORY
+        var hasSubCategories =
+            category.SubCategories != null &&
+            category.SubCategories.Any();
 
-        var subCategory =
-            category.SubCategories
-                .FirstOrDefault(
-                    x =>
-                        x.Id ==
-                        dto.SubCategoryId);
+        if (hasSubCategories)
+        {
+            if (!dto.SubCategoryId.HasValue)
+            {
+                throw new Exception(
+                    "Please select a subcategory for this category.");
+            }
 
-        if (subCategory == null)
+            var subCategory =
+                category.SubCategories!
+                    .FirstOrDefault(
+                        x => x.Id == dto.SubCategoryId.Value);
+
+            if (subCategory == null)
+            {
+                throw new Exception(
+                    "SubCategory not found for this category.");
+            }
+        }
+        else if (dto.SubCategoryId.HasValue)
         {
             throw new Exception(
-                "SubCategory not found for this category.");
+                "This category does not have subcategories. Do not select a subcategory.");
         }
 
 
@@ -502,7 +418,7 @@ public class ProductService : IProductService
             dto.Name,
             dto.Price,
             dto.Stock,
-            dto.Image,
+            dto.Images,
             dto.Variants,
             requireImage: false);
 
@@ -532,20 +448,43 @@ public class ProductService : IProductService
             dto.CategoryId;
 
         product.SubCategoryId =
-            dto.SubCategoryId;
+            hasSubCategories ? dto.SubCategoryId : null;
 
 
-        // UPDATE IMAGE
+        // UPDATE IMAGES
 
-        if (dto.Image != null)
+        if (dto.Images != null && dto.Images.Count > 0)
         {
-            var imageUrl =
-                await _cloudinaryService
-                    .UploadImageAsync(
-                        dto.Image);
+            var newImageUrls =
+                new List<string>();
+
+            foreach (var image in dto.Images)
+            {
+                if (image == null || image.Length == 0)
+                {
+                    continue;
+                }
+
+                var uploadedUrl =
+                    await _cloudinaryService
+                        .UploadImageAsync(
+                            image);
+
+                if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                {
+                    newImageUrls.Add(uploadedUrl);
+                }
+            }
+
+            if (newImageUrls.Count == 0)
+            {
+                throw new Exception(
+                    "Product image upload failed.");
+            }
 
             product.ImageUrl =
-                imageUrl;
+                JsonSerializer.Serialize(
+                    newImageUrls);
         }
 
 
@@ -609,7 +548,56 @@ public class ProductService : IProductService
     }
 
 
-    // DELETE PRODUCT
+    // MOVE PRODUCT TO TRASH
+
+    public async Task<bool>
+        MoveToTrashAsync(
+            int id)
+    {
+        var product =
+            await _productRepository
+                .GetByIdAsync(id);
+
+        if (product == null)
+        {
+            return false;
+        }
+
+        product.Deleted = true;
+
+        await _productRepository
+            .UpdateAsync(product);
+
+        return true;
+    }
+
+
+    // RESTORE PRODUCT
+
+
+    public async Task<bool>
+        RestoreAsync(
+            int id)
+    {
+        var product =
+            await _productRepository
+                .GetByIdAsync(id);
+
+        if (product == null)
+        {
+            return false;
+        }
+
+        product.Deleted = false;
+
+        await _productRepository
+            .UpdateAsync(product);
+
+        return true;
+    }
+
+
+    // PERMANENT DELETE
 
     public async Task<bool>
         DeleteAsync(
@@ -633,13 +621,132 @@ public class ProductService : IProductService
     }
 
 
+    // FILTER VALIDATION AND NORMALIZATION
+    private static void NormalizeAndValidateProductFilters(ProductFilterDto filter)
+    {
+        // Normalize pagination values before passing the filter to the repository.
+        if (filter.Page < 1)
+        {
+            filter.Page = 1;
+        }
+
+        if (filter.PageSize < 1)
+        {
+            filter.PageSize = 5;
+        }
+
+        if (filter.PageSize > 100)
+        {
+            filter.PageSize = 100;
+        }
+
+        // STATUS
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            var status = filter.Status.Trim().ToLowerInvariant();
+
+            if (status is not ("active" or "trash" or "all"))
+            {
+                throw new ArgumentException("Invalid product status.");
+            }
+
+            filter.Status = status;
+        }
+
+        // AGE: allow normal hyphen, en dash and em dash in labels.
+        if (!string.IsNullOrWhiteSpace(filter.Age))
+        {
+            var requestedAge = NormalizeAgeLabel(filter.Age);
+            var validAge = ProductFilterConstants.Ages.FirstOrDefault(
+                age => NormalizeAgeLabel(age) == requestedAge);
+
+            if (validAge == null)
+            {
+                throw new ArgumentException("Invalid age filter.");
+            }
+
+            // Keep a canonical label. The repository also normalizes dashes when querying.
+            filter.Age = validAge;
+        }
+
+        // GENDER
+        if (!string.IsNullOrWhiteSpace(filter.Gender))
+        {
+            var requestedGender = filter.Gender.Trim();
+            var validGender = ProductFilterConstants.Genders.FirstOrDefault(
+                gender => string.Equals(gender, requestedGender, StringComparison.OrdinalIgnoreCase));
+
+            if (validGender == null)
+            {
+                throw new ArgumentException("Invalid gender filter.");
+            }
+
+            filter.Gender = validGender;
+        }
+
+        // PRICE RANGE
+        if (!string.IsNullOrWhiteSpace(filter.PriceRange))
+        {
+            var requestedPriceRange = filter.PriceRange.Trim();
+            var validPriceRange = ProductFilterConstants.PriceRanges.FirstOrDefault(
+                value => string.Equals(value, requestedPriceRange, StringComparison.OrdinalIgnoreCase));
+
+            if (validPriceRange == null)
+            {
+                throw new ArgumentException("Invalid price range.");
+            }
+
+            filter.PriceRange = validPriceRange;
+        }
+
+        // STOCK STATUS
+        if (!string.IsNullOrWhiteSpace(filter.StockStatus))
+        {
+            var requestedStockStatus = filter.StockStatus.Trim();
+            var validStockStatus = ProductFilterConstants.StockStatuses.FirstOrDefault(
+                value => string.Equals(value, requestedStockStatus, StringComparison.OrdinalIgnoreCase));
+
+            if (validStockStatus == null)
+            {
+                throw new ArgumentException("Invalid stock status.");
+            }
+
+            filter.StockStatus = validStockStatus;
+        }
+
+        // SORTING
+        if (!string.IsNullOrWhiteSpace(filter.SortBy))
+        {
+            var requestedSort = filter.SortBy.Trim();
+            var validSort = ProductFilterConstants.SortOptions.FirstOrDefault(
+                value => string.Equals(value, requestedSort, StringComparison.OrdinalIgnoreCase));
+
+            if (validSort == null)
+            {
+                throw new ArgumentException("Invalid sorting option.");
+            }
+
+            filter.SortBy = validSort;
+        }
+    }
+
+    private static string NormalizeAgeLabel(string? value)
+    {
+        return (value ?? string.Empty)
+            .Trim()
+            .Replace("–", "-")
+            .Replace("—", "-")
+            .ToLowerInvariant();
+    }
+
+
     // VALIDATION
 
     private static void ValidateProduct(
         string name,
         decimal price,
         int stock,
-        IFormFile? image,
+        List<IFormFile>? images,
         List<CreateProductVariantDto> variants,
         bool requireImage = true)
     {
@@ -670,14 +777,21 @@ public class ProductService : IProductService
         }
 
 
-        // IMAGE
+        // IMAGES
+
+        var validImages =
+            images?
+                .Where(image =>
+                    image != null &&
+                    image.Length > 0)
+                .ToList()
+            ?? new List<IFormFile>();
 
         if (requireImage &&
-            (image == null ||
-             image.Length == 0))
+            validImages.Count == 0)
         {
             throw new Exception(
-                "Product image is required.");
+                "At least one product image is required.");
         }
 
 
@@ -723,13 +837,51 @@ public class ProductService : IProductService
     }
 
 
-    
+    // READ STORED IMAGE URLS
+
+    private static List<string> GetStoredImageUrls(
+        Product product)
+    {
+        if (string.IsNullOrWhiteSpace(
+                product.ImageUrl))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            var urls =
+                JsonSerializer.Deserialize<List<string>>(
+                    product.ImageUrl);
+
+            if (urls != null)
+            {
+                return urls
+                    .Where(url =>
+                        !string.IsNullOrWhiteSpace(url))
+                    .ToList();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return new List<string>
+        {
+            product.ImageUrl
+        };
+    }
+
+
     // MAP ENTITY TO RESPONSE DTO
 
     private static ProductResponseDto
         MapToResponse(
             Product product)
     {
+        var imageUrls =
+            GetStoredImageUrls(product);
+
         return new ProductResponseDto
         {
             Id =
@@ -748,13 +900,24 @@ public class ProductService : IProductService
                 product.Stock,
 
             ImageUrl =
-                product.ImageUrl,
+                imageUrls
+                    .FirstOrDefault()
+                ?? string.Empty,
+
+            Images =
+                imageUrls,
 
             BestSeller =
                 product.BestSeller,
 
             NewArrival =
                 product.NewArrival,
+
+            Gender =
+                product.Gender,
+
+            Deleted =
+                product.Deleted,
 
             CategoryId =
                 product.CategoryId,
@@ -766,6 +929,9 @@ public class ProductService : IProductService
             SubCategory =
                 product.SubCategory?.Name
                 ?? string.Empty,
+
+            SubCategoryId =
+                product.SubCategoryId,
 
             Variants =
                 product.Variants

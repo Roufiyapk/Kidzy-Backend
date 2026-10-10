@@ -1,4 +1,4 @@
-﻿namespace Kidzy.Application.DTOs.Admin;
+﻿namespace Kidzy.Application.DTOs.User;
 
 public class UserListDto
 {
@@ -7,6 +7,12 @@ public class UserListDto
     public string Name { get; set; } = string.Empty;
 
     public string Email { get; set; } = string.Empty;
+
+    public string? Phone { get; set; }
+
+    public string? Address { get; set; }
+
+    public string? Pincode { get; set; }
 
     public string Role { get; set; } = string.Empty;
 

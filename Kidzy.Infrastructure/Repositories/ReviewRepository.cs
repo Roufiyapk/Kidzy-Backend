@@ -16,6 +16,7 @@ public class ReviewRepository : IReviewRepository
     }
 
     // GET REVIEWS FOR ONE PRODUCT
+    
 
     public async Task<List<Review>>
         GetByProductIdAsync(
@@ -39,6 +40,22 @@ public class ReviewRepository : IReviewRepository
             .Include(x => x.User)
             .Include(x => x.Product)
             .OrderByDescending(x => x.CreatedAt)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    // GET HIGH RATED REVIEWS
+    // RATING 4.5 OR ABOVE
+
+    public async Task<List<Review>>
+        GetHighRatedAsync()
+    {
+        return await _context.Reviews
+            .Include(x => x.User)
+            .Include(x => x.Product)
+            .Where(x => x.Rating >= 4.5)
+            .OrderByDescending(x => x.Rating)
+            .ThenByDescending(x => x.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
     }

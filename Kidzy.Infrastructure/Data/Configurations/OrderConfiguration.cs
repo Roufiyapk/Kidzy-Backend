@@ -1,5 +1,5 @@
 ﻿using Kidzy.Domain.Entities;
-using Kidzy.Domain.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,93 +11,122 @@ public class OrderConfiguration
     public void Configure(
         EntityTypeBuilder<Order> builder)
     {
-        builder.ToTable("Orders");
-
-        builder.HasKey(x => x.Id);
-
-
-        builder.Property(x => x.UserId)
-            .IsRequired();
+        builder.HasKey(
+            x => x.Id);
 
 
-        builder.Property(x => x.Subtotal)
+        builder.Property(
+                x => x.Subtotal)
+            .HasPrecision(
+                18,
+                2);
+
+
+        builder.Property(
+                x => x.DeliveryFee)
+            .HasPrecision(
+                18,
+                2);
+
+
+        builder.Property(
+                x => x.TotalAmount)
+            .HasPrecision(
+                18,
+                2);
+
+
+        builder.Property(
+                x => x.ShippingName)
             .IsRequired()
-            .HasColumnType("decimal(18,2)");
+            .HasMaxLength(200);
 
 
-        builder.Property(x => x.DeliveryFee)
-            .IsRequired()
-            .HasColumnType("decimal(18,2)");
-
-
-        builder.Property(x => x.TotalAmount)
-            .IsRequired()
-            .HasColumnType("decimal(18,2)");
-
-
-        builder.Property(x => x.ShippingName)
-            .IsRequired()
-            .HasMaxLength(100);
-
-
-        builder.Property(x => x.ShippingPhone)
+        builder.Property(
+                x => x.ShippingPhone)
             .IsRequired()
             .HasMaxLength(20);
 
 
-        builder.Property(x => x.ShippingAddress)
+        builder.Property(
+                x => x.ShippingAddress)
             .IsRequired()
-            .HasMaxLength(500);
+            .HasMaxLength(1000);
 
 
-        builder.Property(x => x.ShippingPincode)
+        builder.Property(
+                x => x.ShippingPlace)
+            .IsRequired()
+            .HasMaxLength(200);
+
+
+        builder.Property(
+                x => x.ShippingState)
+            .IsRequired()
+            .HasMaxLength(100);
+
+
+        builder.Property(
+                x => x.ShippingPincode)
             .IsRequired()
             .HasMaxLength(10);
 
 
-        builder.Property(x => x.PaymentMethod)
+        builder.Property(
+                x => x.PaymentMethod)
             .IsRequired()
-            .HasMaxLength(30);
+            .HasMaxLength(50);
 
 
-        builder.Property(x => x.PaymentStatus)
+        builder.Property(
+                x => x.PaymentStatus)
             .IsRequired()
-            .HasMaxLength(30);
+            .HasMaxLength(50);
 
 
-        builder.Property(x => x.RazorpayPaymentId)
+        builder.Property(
+                x => x.RazorpayPaymentId)
             .HasMaxLength(200);
 
 
-        builder.Property(x => x.RazorpayOrderId)
+        builder.Property(
+                x => x.RazorpayOrderId)
             .HasMaxLength(200);
 
 
-        builder.Property(x => x.RazorpaySignature)
+        builder.Property(
+                x => x.RazorpaySignature)
             .HasMaxLength(500);
 
 
-        builder.Property(x => x.Status)
-            .IsRequired()
-            .HasConversion<int>()
-            .HasDefaultValue(
-                OrderStatus.OrderPlaced);
-
-
-        builder.Property(x => x.CreatedAt)
-            .IsRequired();
-
-
-        builder.HasOne(x => x.User)
+        // USER
+        builder.HasOne(
+                x => x.User)
             .WithMany()
-            .HasForeignKey(x => x.UserId)
+            .HasForeignKey(
+                x => x.UserId)
             .OnDelete(
                 DeleteBehavior.Restrict);
 
 
-        builder.HasMany(x => x.Items)
-            .WithOne(x => x.Order)
-            .HasForeignKey(x => x.OrderId)
+        // PAYMENT
+        builder.HasOne(
+                x => x.Payment)
+            .WithOne(
+                x => x.Order)
+            .HasForeignKey<Order>(
+                x => x.PaymentId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
+
+
+        // ITEMS
+        builder.HasMany(
+                x => x.Items)
+            .WithOne(
+                x => x.Order)
+            .HasForeignKey(
+                x => x.OrderId)
             .OnDelete(
                 DeleteBehavior.Cascade);
     }

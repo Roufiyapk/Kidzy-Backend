@@ -32,133 +32,96 @@ public static class DependencyInjection
 
         // REPOSITORIES
 
-        // User
         services.AddScoped<
             IUserRepository,
             UserRepository>();
 
-
-
-        // Product
         services.AddScoped<
             IProductRepository,
             ProductRepository>();
 
-
-        // Cart
         services.AddScoped<
             ICartRepository,
-
-
             CartRepository>();
-
-
-        // Category 
 
         services.AddScoped<
             ICategoryRepository,
             CategoryRepository>();
 
-
-        // Wishlist
         services.AddScoped<
             IWishlistRepository,
             WishlistRepository>();
-
-
-        // ORDER
-        // User + Admin
 
         services.AddScoped<
             IOrderRepository,
             OrderRepository>();
 
+        services.AddScoped<
+            IPaymentRepository,
+            PaymentRepository>();
 
-        // Review
         services.AddScoped<
             IReviewRepository,
             ReviewRepository>();
 
+        services.AddScoped<
+            IDashboardRepository,
+            DashboardRepository>();
 
-        // APPLICATION SERVICES
 
-        // Password
+        // AUTHENTICATION
+
         services.AddScoped<
             IPasswordHasher,
             PasswordHasher>();
 
-
-        // JWT
         services.AddScoped<
             IJwtService,
             JwtService>();
 
 
-        // Authentication
+        // APPLICATION SERVICES
+
         services.AddScoped<
             IAuthService,
             AuthService>();
 
-
-        // User
         services.AddScoped<
             IUserService,
             UserService>();
 
-
-
-
-        // Product
         services.AddScoped<
             IProductService,
             ProductService>();
 
+        services.AddScoped<
+            ICategoryService,
+            CategoryService>();
 
-        // Cart
         services.AddScoped<
             ICartService,
             CartService>();
 
-
-        // Wishlist
         services.AddScoped<
             IWishlistService,
             WishlistService>();
-
-        // ADMIN DASHBOARD
-
-        services.AddScoped<
-            IDashboardRepository,
-            DashboardRepository>();
-
-        services.AddScoped<
-            IDashboardService,
-            DashboardService>();
-
-
-        // ORDER
-        // User + Admin
 
         services.AddScoped<
             IOrderService,
             OrderService>();
 
+        services.AddScoped<
+            IPaymentService,
+            PaymentService>();
 
-        // Review
         services.AddScoped<
             IReviewService,
             ReviewService>();
 
-
-        // ADMIN DASHBOARD
-
-        services.AddScoped<
-            IDashboardRepository,
-            DashboardRepository>();
-
         services.AddScoped<
             IDashboardService,
             DashboardService>();
+
 
         // CLOUDINARY
 
@@ -169,12 +132,12 @@ public static class DependencyInjection
 
         // RAZORPAY
 
-        services.AddHttpClient<
+        services.AddScoped<
             IRazorpayService,
             RazorpayService>();
 
 
-        // SEEDERS
+        // ADMIN SEEDER
 
         services.AddScoped<
             AdminSeeder>();

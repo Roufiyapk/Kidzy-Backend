@@ -5,91 +5,83 @@ using Kidzy.Domain.Enums;
 
 namespace Kidzy.Application.Services;
 
-public class DashboardService
-    : IDashboardService
+public class DashboardService : IDashboardService
 {
-    private readonly IDashboardRepository
-        _dashboardRepository;
+    private readonly IDashboardRepository _dashboardRepository;
 
-    public DashboardService(
-        IDashboardRepository dashboardRepository)
+    public DashboardService(IDashboardRepository dashboardRepository)
     {
-        _dashboardRepository =
-            dashboardRepository;
+        _dashboardRepository = dashboardRepository;
     }
 
-
-    public async Task<DashboardDto>
-        GetDashboardAsync()
+    public async Task<DashboardDto> GetDashboardAsync()
     {
+        // TOTAL USERS
         var totalUsers =
-            await _dashboardRepository
-                .GetTotalUsersAsync();
+            await _dashboardRepository.GetTotalUsersAsync();
 
+        // TOTAL PRODUCTS
         var totalProducts =
-            await _dashboardRepository
-                .GetTotalProductsAsync();
+            await _dashboardRepository.GetTotalProductsAsync();
 
+        // TOTAL ORDERS
         var totalOrders =
-            await _dashboardRepository
-                .GetTotalOrdersAsync();
+            await _dashboardRepository.GetTotalOrdersAsync();
 
+        // TOTAL REVENUE
         var totalRevenue =
-            await _dashboardRepository
-                .GetTotalRevenueAsync();
+            await _dashboardRepository.GetTotalRevenueAsync();
 
+        // ORDERS BY STATUS
         var orderPlaced =
-            await _dashboardRepository
-                .GetOrdersByStatusAsync(
-                    OrderStatus.OrderPlaced);
+            await _dashboardRepository.GetOrdersByStatusAsync(
+                OrderStatus.OrderPlaced);
 
         var processing =
-            await _dashboardRepository
-                .GetOrdersByStatusAsync(
-                    OrderStatus.Processing);
+            await _dashboardRepository.GetOrdersByStatusAsync(
+                OrderStatus.Processing);
 
         var shipped =
-            await _dashboardRepository
-                .GetOrdersByStatusAsync(
-                    OrderStatus.Shipped);
+            await _dashboardRepository.GetOrdersByStatusAsync(
+                OrderStatus.Shipped);
 
         var outForDelivery =
-            await _dashboardRepository
-                .GetOrdersByStatusAsync(
-                    OrderStatus.OutForDelivery);
+            await _dashboardRepository.GetOrdersByStatusAsync(
+                OrderStatus.OutForDelivery);
 
         var delivered =
-            await _dashboardRepository
-                .GetOrdersByStatusAsync(
-                    OrderStatus.Delivered);
+            await _dashboardRepository.GetOrdersByStatusAsync(
+                OrderStatus.Delivered);
 
         var cancelled =
-            await _dashboardRepository
-                .GetOrdersByStatusAsync(
-                    OrderStatus.Cancelled);
+            await _dashboardRepository.GetOrdersByStatusAsync(
+                OrderStatus.Cancelled);
 
+        // MONTHLY REVENUE
+        var monthlyRevenue =
+            await _dashboardRepository.GetMonthlyRevenueAsync();
 
+        // MONTHLY ORDERS
+        var monthlyOrders =
+            await _dashboardRepository.GetMonthlyOrdersAsync();
+
+        // RETURN DASHBOARD DATA
         return new DashboardDto
         {
             TotalUsers = totalUsers,
-
             TotalProducts = totalProducts,
-
             TotalOrders = totalOrders,
-
             TotalRevenue = totalRevenue,
 
             OrderPlaced = orderPlaced,
-
             Processing = processing,
-
             Shipped = shipped,
-
             OutForDelivery = outForDelivery,
-
             Delivered = delivered,
+            Cancelled = cancelled,
 
-            Cancelled = cancelled
+            MonthlyRevenue = monthlyRevenue,
+            MonthlyOrders = monthlyOrders
         };
     }
 }

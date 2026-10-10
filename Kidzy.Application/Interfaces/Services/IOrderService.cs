@@ -4,15 +4,13 @@ namespace Kidzy.Application.Interfaces.Services;
 
 public interface IOrderService
 {
-    // USER
-
-    Task<CheckoutResponseDto>
+    Task<OrderResponseDto>
         CreateOrderFromCartAsync(
             int userId,
             CreateOrderDto dto);
 
 
-    Task<CheckoutResponseDto>
+    Task<OrderResponseDto>
         CreateBuyNowOrderAsync(
             int userId,
             BuyNowOrderDto dto);
@@ -34,8 +32,6 @@ public interface IOrderService
             int userId,
             int orderId);
 
-
-    // ADMIN
 
     Task<List<AdminOrderResponseDto>>
         GetAllOrdersAsync(

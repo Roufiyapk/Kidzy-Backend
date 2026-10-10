@@ -15,16 +15,13 @@ public class ProductController : ControllerBase
 {
     private readonly IProductService _service;
 
-
-    public ProductController(
-        IProductService service)
+    public ProductController(IProductService service)
     {
         _service = service;
     }
 
-
     // USER - GET ALL PRODUCTS
-    // FILTER + SORTING
+    
 
     [HttpGet]
     public async Task<IActionResult> GetAll(
@@ -36,7 +33,7 @@ public class ProductController : ControllerBase
                 await _service.GetAllAsync(filter);
 
             return Ok(
-                ApiResponse<List<ProductResponseDto>>
+                ApiResponse<ProductPagedResponseDto>
                     .Success(
                         products,
                         "Products retrieved successfully."));
@@ -44,7 +41,7 @@ public class ProductController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(
-                ApiResponse<List<ProductResponseDto>>
+                ApiResponse<ProductPagedResponseDto>
                     .Fail(
                         new List<string>
                         {
@@ -79,7 +76,6 @@ public class ProductController : ControllerBase
                             HttpStatusCode.NotFound));
             }
 
-
             return Ok(
                 ApiResponse<ProductResponseDto>
                     .Success(
@@ -110,8 +106,7 @@ public class ProductController : ControllerBase
         {
             var products =
                 await _service
-                    .GetByCategoryAsync(
-                        categoryId);
+                    .GetByCategoryAsync(categoryId);
 
             return Ok(
                 ApiResponse<List<ProductResponseDto>>
@@ -150,7 +145,6 @@ public class ProductController : ControllerBase
                         },
                         "Search failed."));
         }
-
 
         try
         {
@@ -192,7 +186,6 @@ public class ProductController : ControllerBase
                 await _service
                     .CreateAsync(dto);
 
-
             return StatusCode(
                 (int)HttpStatusCode.Created,
 
@@ -233,7 +226,6 @@ public class ProductController : ControllerBase
                         id,
                         dto);
 
-
             if (product == null)
             {
                 return NotFound(
@@ -246,7 +238,6 @@ public class ProductController : ControllerBase
                             "Product not found.",
                             HttpStatusCode.NotFound));
             }
-
 
             return Ok(
                 ApiResponse<ProductResponseDto>
@@ -268,7 +259,101 @@ public class ProductController : ControllerBase
     }
 
 
-    // ADMIN - DELETE PRODUCT
+    // ADMIN - MOVE PRODUCT TO TRASH
+    // SOFT DELETE
+
+    [HttpPut("{id:int}/trash")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> MoveToTrash(
+        int id)
+    {
+        try
+        {
+            var moved =
+                await _service
+                    .MoveToTrashAsync(id);
+
+            if (!moved)
+            {
+                return NotFound(
+                    ApiResponse<string>
+                        .Fail(
+                            new List<string>
+                            {
+                                "Product not found."
+                            },
+                            "Product not found.",
+                            HttpStatusCode.NotFound));
+            }
+
+            return Ok(
+                ApiResponse<string>
+                    .Success(
+                        string.Empty,
+                        "Product moved to trash successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<string>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to move product to trash."));
+        }
+    }
+
+
+    // ADMIN - RESTORE PRODUCT FROM TRASH
+    
+
+    [HttpPut("{id:int}/restore")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Restore(
+        int id)
+    {
+        try
+        {
+            var restored =
+                await _service
+                    .RestoreAsync(id);
+
+            if (!restored)
+            {
+                return NotFound(
+                    ApiResponse<string>
+                        .Fail(
+                            new List<string>
+                            {
+                                "Product not found."
+                            },
+                            "Product not found.",
+                            HttpStatusCode.NotFound));
+            }
+
+            return Ok(
+                ApiResponse<string>
+                    .Success(
+                        string.Empty,
+                        "Product restored successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<string>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to restore product."));
+        }
+    }
+
+
+    // ADMIN - PERMANENT DELETE PRODUCT
 
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin")]
@@ -280,7 +365,6 @@ public class ProductController : ControllerBase
             var deleted =
                 await _service
                     .DeleteAsync(id);
-
 
             if (!deleted)
             {
@@ -295,12 +379,11 @@ public class ProductController : ControllerBase
                             HttpStatusCode.NotFound));
             }
 
-
             return Ok(
                 ApiResponse<string>
                     .Success(
                         string.Empty,
-                        "Product deleted successfully."));
+                        "Product permanently deleted successfully."));
         }
         catch (Exception ex)
         {

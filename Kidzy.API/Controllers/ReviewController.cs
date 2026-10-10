@@ -1,9 +1,12 @@
 ﻿using System.Net;
 using System.Security.Claims;
+
 using FluentValidation;
+
 using Kidzy.API.Contracts;
 using Kidzy.Application.DTOs.Reviews;
 using Kidzy.Application.Interfaces.Services;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,23 +23,52 @@ public class ReviewController : ControllerBase
 
     public ReviewController(
         IReviewService reviewService,
-        IValidator<CreateReviewDto>
-            createReviewValidator)
+        IValidator<CreateReviewDto> createReviewValidator)
     {
-        _reviewService =
-            reviewService;
+        _reviewService = reviewService;
 
         _createReviewValidator =
             createReviewValidator;
     }
 
-    // GET REVIEWS FOR PRODUCT
+
+    // ADMIN - GET ALL REVIEWS
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAll()
+    {
+        try
+        {
+            var reviews =
+                await _reviewService.GetAllAsync();
+
+            return Ok(
+                ApiResponse<List<ReviewResponseDto>>
+                    .Success(
+                        reviews,
+                        "All reviews retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<List<ReviewResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to retrieve all reviews."));
+        }
+    }
+
+
+    // USER - GET REVIEWS FOR PRODUCT
 
     [HttpGet("product/{productId:int}")]
     [AllowAnonymous]
-    public async Task<IActionResult>
-        GetByProductId(
-            int productId)
+    public async Task<IActionResult> GetByProductId(
+        int productId)
     {
         try
         {
@@ -64,16 +96,47 @@ public class ReviewController : ControllerBase
         }
     }
 
-    // CREATE REVIEW
+
+    // USER - GET HIGH RATED REVIEWS
+    // RATING 4.5 OR ABOVE
+
+    [HttpGet("high-rated")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetHighRated()
+    {
+        try
+        {
+            var reviews =
+                await _reviewService
+                    .GetHighRatedAsync();
+
+            return Ok(
+                ApiResponse<List<ReviewResponseDto>>
+                    .Success(
+                        reviews,
+                        "High rated reviews retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<List<ReviewResponseDto>>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to retrieve high rated reviews."));
+        }
+    }
+
+
+    // USER - CREATE REVIEW
 
     [HttpPost]
     [Authorize]
-    public async Task<IActionResult>
-        Create(
-            [FromBody]
-            CreateReviewDto dto)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateReviewDto dto)
     {
-        // FluentValidation
         var validationResult =
             await _createReviewValidator
                 .ValidateAsync(dto);
@@ -103,6 +166,7 @@ public class ReviewController : ControllerBase
 
             return StatusCode(
                 (int)HttpStatusCode.Created,
+
                 ApiResponse<ReviewResponseDto>
                     .Success(
                         review,
@@ -133,6 +197,51 @@ public class ReviewController : ControllerBase
                         "Failed to add review."));
         }
     }
+
+
+    // ADMIN - DELETE REVIEW
+
+    [HttpDelete("{reviewId:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(
+        int reviewId)
+    {
+        try
+        {
+            await _reviewService
+                .DeleteAsync(reviewId);
+
+            return Ok(
+                ApiResponse<string>
+                    .Success(
+                        string.Empty,
+                        "Review deleted successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(
+                ApiResponse<string>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Review not found.",
+                        HttpStatusCode.NotFound));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<string>
+                    .Fail(
+                        new List<string>
+                        {
+                            ex.Message
+                        },
+                        "Failed to delete review."));
+        }
+    }
+
 
     // GET USER ID FROM JWT
 

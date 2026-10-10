@@ -1,405 +1,183 @@
-﻿using System.Net.Http.Headers;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Kidzy.Application.DTOs.Orders;
+
+using Kidzy.Application.DTOs.Payments;
 using Kidzy.Application.Interfaces.Services;
+
 using Microsoft.Extensions.Configuration;
+
+using Razorpay.Api;
 
 namespace Kidzy.Infrastructure.Payment;
 
 public class RazorpayService : IRazorpayService
 {
-    private readonly HttpClient _httpClient;
-
     private readonly string _keyId;
-
     private readonly string _keySecret;
 
-
     public RazorpayService(
-        HttpClient httpClient,
         IConfiguration configuration)
     {
-        _httpClient = httpClient;
-
-        // Razorpay Key ID is directly defined here.
         _keyId =
-         configuration["Razorpay:KeyId"]
-         ?? string.Empty;
+            configuration["Razorpay:KeyId"]
+            ?? throw new InvalidOperationException(
+                "Razorpay KeyId is missing.");
 
-        // Razorpay Key Secret comes from User Secrets.
         _keySecret =
             configuration["Razorpay:KeySecret"]
-            ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(_keyId))
-        {
-            throw new Exception(
-                "Razorpay KeyId is not configured.");
-        }
-
-        if (string.IsNullOrWhiteSpace(_keySecret))
-        {
-            throw new Exception(
-                "Razorpay KeySecret is not configured.");
-        }
-
-        _httpClient.BaseAddress =
-            new Uri(
-                "https://api.razorpay.com/v1/");
+            ?? throw new InvalidOperationException(
+                "Razorpay KeySecret is missing.");
     }
 
-
-    // CREATE RAZORPAY ORDER
-
-    public async Task<RazorpayOrderDto>
-        CreateOrderAsync(
-            decimal amount,
-            string receipt)
+    public Task<RazorpayOrderResponseDto> CreateOrderAsync(
+        decimal amount,
+        string receipt)
     {
+        if (amount <= 0)
+        {
+            throw new Exception(
+                "Payment amount must be greater than zero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(receipt))
+        {
+            throw new Exception(
+                "Payment receipt is required.");
+        }
+
+        var client =
+            new RazorpayClient(
+                _keyId,
+                _keySecret);
+
         var amountInPaise =
-            Convert.ToInt64(
-                Math.Round(
-                    amount * 100,
+            checked(
+                (long)Math.Round(
+                    amount * 100m,
                     MidpointRounding.AwayFromZero));
 
-        var request =
-            new HttpRequestMessage(
-                HttpMethod.Post,
-                "orders");
-
-        AddAuthorization(request);
-
-        var body =
-            new
+        var options =
+            new Dictionary<string, object>
             {
-                amount = amountInPaise,
-
-                currency = "INR",
-
-                receipt = receipt,
-
-                partial_payment = false
+                ["amount"] = amountInPaise,
+                ["currency"] = "INR",
+                ["receipt"] = receipt
             };
 
-        request.Content =
-            new StringContent(
-                JsonSerializer.Serialize(body),
-                Encoding.UTF8,
-                "application/json");
-
-        var response =
-            await _httpClient
-                .SendAsync(request);
-
-        var responseBody =
-            await response.Content
-                .ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new Exception(
-                $"Razorpay order creation failed: " +
-                $"{responseBody}");
-        }
-
         var razorpayOrder =
-            JsonSerializer.Deserialize
-                <RazorpayOrderResponse>(
-                    responseBody);
+            client.Order.Create(options);
 
-        if (razorpayOrder == null ||
-            string.IsNullOrWhiteSpace(
-                razorpayOrder.Id))
-        {
-            throw new Exception(
-                "Invalid Razorpay order response.");
-        }
+        var result =
+            new RazorpayOrderResponseDto
+            {
+                // Razorpay Order ID
+                Id =
+                    Convert.ToString(
+                        razorpayOrder["id"])
+                    ?? string.Empty,
 
-        return new RazorpayOrderDto
-        {
-            Id = razorpayOrder.Id,
+                // Razorpay Public Key ID
+                KeyId =
+                    _keyId,
 
-            Amount = razorpayOrder.Amount,
+                // Amount in paise
+                Amount =
+                    Convert.ToInt64(
+                        razorpayOrder["amount"]),
 
-            Currency =
-                razorpayOrder.Currency
-                ?? "INR",
+                Currency =
+                    Convert.ToString(
+                        razorpayOrder["currency"])
+                    ?? "INR",
 
-            KeyId = _keyId
-        };
+                Receipt =
+                    Convert.ToString(
+                        razorpayOrder["receipt"])
+                    ?? string.Empty,
+
+                Status =
+                    Convert.ToString(
+                        razorpayOrder["status"])
+                    ?? string.Empty
+            };
+
+        return Task.FromResult(result);
     }
 
-
-    // VERIFY PAYMENT
-
-    public async Task<bool>
-        VerifyPaymentAsync(
-            string razorpayOrderId,
-            string razorpayPaymentId,
-            string razorpaySignature,
-            decimal expectedAmount,
-            string expectedReceiptPrefix)
+    public Task<bool> VerifyPaymentAsync(
+        string razorpayOrderId,
+        string razorpayPaymentId,
+        string razorpaySignature)
     {
-        if (string.IsNullOrWhiteSpace(
-                razorpayOrderId) ||
-            string.IsNullOrWhiteSpace(
-                razorpayPaymentId) ||
-            string.IsNullOrWhiteSpace(
-                razorpaySignature))
+        if (string.IsNullOrWhiteSpace(razorpayOrderId))
         {
-            return false;
+            throw new Exception(
+                "Razorpay order ID is required.");
         }
 
+        if (string.IsNullOrWhiteSpace(razorpayPaymentId))
+        {
+            throw new Exception(
+                "Razorpay payment ID is required.");
+        }
 
-        // Get Razorpay order
+        if (string.IsNullOrWhiteSpace(razorpaySignature))
+        {
+            throw new Exception(
+                "Razorpay signature is required.");
+        }
+
+        var client =
+            new RazorpayClient(
+                _keyId,
+                _keySecret);
+
         var razorpayOrder =
-            await GetOrderAsync(
+            client.Order.Fetch(
                 razorpayOrderId);
 
-        if (razorpayOrder == null)
-            return false;
+        var fetchedOrderId =
+            Convert.ToString(
+                razorpayOrder["id"])
+            ?? string.Empty;
 
-
-        // Check receipt
-        if (string.IsNullOrWhiteSpace(
-                razorpayOrder.Receipt))
-        {
-            return false;
-        }
-
-
-        // Check order belongs to
-        // this checkout/user prefix.
-        if (!razorpayOrder.Receipt
-                .StartsWith(
-                    expectedReceiptPrefix,
-                    StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-
-        // Convert expected amount to paise
-        var expectedAmountInPaise =
-            Convert.ToInt64(
-                Math.Round(
-                    expectedAmount * 100,
-                    MidpointRounding.AwayFromZero));
-
-
-        // Check order amount
-        if (razorpayOrder.Amount !=
-            expectedAmountInPaise)
-        {
-            return false;
-        }
-
-
-        // Get payment
-        var payment =
-            await GetPaymentAsync(
-                razorpayPaymentId);
-
-        if (payment == null)
-            return false;
-
-
-        // Check payment belongs
-        // to the Razorpay order
         if (!string.Equals(
-                payment.OrderId,
-                razorpayOrder.Id,
+                fetchedOrderId,
+                razorpayOrderId,
                 StringComparison.Ordinal))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
+        var payload =
+            $"{razorpayOrderId}|{razorpayPaymentId}";
 
-        // Check payment amount
-        if (payment.Amount !=
-            expectedAmountInPaise)
-        {
-            return false;
-        }
-
-
-        // Payment must be captured
-        if (!string.Equals(
-                payment.Status,
-                "captured",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-
-        // Verify Razorpay signature
-        return VerifySignature(
-            razorpayOrder.Id,
-            razorpayPaymentId,
-            razorpaySignature);
-    }
-
-
-    // SIGNATURE VERIFICATION
-
-    private bool VerifySignature(
-        string orderId,
-        string paymentId,
-        string signature)
-    {
         using var hmac =
             new HMACSHA256(
                 Encoding.UTF8.GetBytes(
                     _keySecret));
-
-        var payload =
-            $"{orderId}|{paymentId}";
 
         var hash =
             hmac.ComputeHash(
                 Encoding.UTF8.GetBytes(
                     payload));
 
-        var expectedSignature =
+        var generatedSignature =
             Convert.ToHexString(hash)
                 .ToLowerInvariant();
 
-        var actualSignature =
-            signature
+        var suppliedSignature =
+            razorpaySignature
                 .Trim()
                 .ToLowerInvariant();
 
-        return CryptographicOperations
-            .FixedTimeEquals(
+        var valid =
+            CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(
-                    expectedSignature),
-
+                    generatedSignature),
                 Encoding.UTF8.GetBytes(
-                    actualSignature));
-    }
+                    suppliedSignature));
 
-
-    // GET RAZORPAY ORDER
-
-    private async Task<RazorpayOrderResponse?>
-        GetOrderAsync(
-            string orderId)
-    {
-        var request =
-            new HttpRequestMessage(
-                HttpMethod.Get,
-                $"orders/{orderId}");
-
-        AddAuthorization(request);
-
-        var response =
-            await _httpClient
-                .SendAsync(request);
-
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var body =
-            await response.Content
-                .ReadAsStringAsync();
-
-        return JsonSerializer.Deserialize
-            <RazorpayOrderResponse>(
-                body);
-    }
-
-
-    // GET PAYMENT
-
-    private async Task<RazorpayPaymentResponse?>
-        GetPaymentAsync(
-            string paymentId)
-    {
-        var request =
-            new HttpRequestMessage(
-                HttpMethod.Get,
-                $"payments/{paymentId}");
-
-        AddAuthorization(request);
-
-        var response =
-            await _httpClient
-                .SendAsync(request);
-
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var body =
-            await response.Content
-                .ReadAsStringAsync();
-
-        return JsonSerializer.Deserialize
-            <RazorpayPaymentResponse>(
-                body);
-    }
-
-
-    // BASIC AUTH
-
-    private void AddAuthorization(
-        HttpRequestMessage request)
-    {
-        var credentials =
-            Convert.ToBase64String(
-                Encoding.UTF8.GetBytes(
-                    $"{_keyId}:{_keySecret}"));
-
-        request.Headers.Authorization =
-            new AuthenticationHeaderValue(
-                "Basic",
-                credentials);
-    }
-
-
-    // RAZORPAY ORDER RESPONSE
-
-    private sealed class RazorpayOrderResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-            = string.Empty;
-
-
-        [JsonPropertyName("amount")]
-        public long Amount { get; set; }
-
-
-        [JsonPropertyName("currency")]
-        public string? Currency { get; set; }
-
-
-        [JsonPropertyName("receipt")]
-        public string? Receipt { get; set; }
-    }
-
-
-    // RAZORPAY PAYMENT RESPONSE
-
-    private sealed class RazorpayPaymentResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-            = string.Empty;
-
-
-        [JsonPropertyName("order_id")]
-        public string? OrderId { get; set; }
-
-
-        [JsonPropertyName("amount")]
-        public long Amount { get; set; }
-
-
-        [JsonPropertyName("status")]
-        public string? Status { get; set; }
+        return Task.FromResult(valid);
     }
 }

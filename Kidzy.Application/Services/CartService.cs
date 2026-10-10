@@ -15,15 +15,12 @@ public class CartService : ICartService
         _cartRepository = cartRepository;
     }
 
-
     // GET CART
 
-    public async Task<CartResponseDto>
-        GetCartAsync(int userId)
+    public async Task<CartResponseDto> GetCartAsync(int userId)
     {
-        var cart =
-            await _cartRepository
-                .GetCartAsync(userId);
+        var cart = await _cartRepository
+            .GetCartAsync(userId);
 
         if (cart == null)
         {
@@ -37,171 +34,144 @@ public class CartService : ICartService
         return new CartResponseDto
         {
             CartId = cart.Id,
-
             Items = items,
-
-            TotalAmount =
-                items.Sum(x => x.TotalPrice)
+            TotalAmount = items.Sum(x => x.TotalPrice)
         };
     }
 
-
     // ADD TO CART
 
-    public async Task<CartItemDto>
-        AddToCartAsync(
-            int userId,
-            AddToCartDto dto)
+    public async Task<CartItemDto> AddToCartAsync(
+        int userId,
+        AddToCartDto dto)
     {
-        // Quantity validation
+        // Validate quantity
+
         if (dto.Quantity <= 0)
         {
             throw new Exception(
                 "Quantity must be greater than zero.");
         }
 
+        // Get product with variants
 
-        // Get product + variants
-        var product =
-            await _cartRepository
-                .GetProductWithVariantsAsync(
-                    dto.ProductId);
+        var product = await _cartRepository
+            .GetProductWithVariantsAsync(dto.ProductId);
 
         if (product == null)
         {
-            throw new Exception(
-                "Product not found.");
+            throw new Exception("Product not found.");
         }
 
+        // Check whether product has variants
 
-        // Does product have sizes?
         var hasVariants =
             product.Variants != null &&
             product.Variants.Any();
 
-
-        // If sizes exist,
-        // user MUST select a size
-        if (hasVariants &&
-            dto.ProductVariantId == null)
+        if (hasVariants && !dto.ProductVariantId.HasValue)
         {
             throw new Exception(
                 "Please select a size.");
         }
 
-
         ProductVariant? variant = null;
 
-
         // Validate selected variant
+
         if (dto.ProductVariantId.HasValue)
         {
-            variant =
-                product.Variants
-                    .FirstOrDefault(v =>
-                        v.Id ==
-                        dto.ProductVariantId.Value);
+            variant = product.Variants
+                .FirstOrDefault(v =>
+                    v.Id == dto.ProductVariantId.Value);
 
             if (variant == null)
             {
                 throw new Exception(
                     "Invalid product variant.");
             }
-
-
-            // Check stock
-            if (dto.Quantity >
-                variant.Stock)
-            {
-                throw new Exception(
-                    "Not enough stock available.");
-            }
         }
 
+        // Determine available stock
+
+        var availableStock = variant != null
+            ? variant.Stock
+            : product.Stock;
+
+        if (availableStock <= 0)
+        {
+            throw new Exception(
+                "This product is currently out of stock.");
+        }
 
         // Get user's cart
-        var cart =
-            await _cartRepository
-                .GetCartAsync(userId);
 
+        var cart = await _cartRepository
+            .GetCartAsync(userId);
 
-        // Create cart if needed
+        // Create cart if it does not exist
+
         if (cart == null)
         {
-            cart =
-                await _cartRepository
-                    .CreateCartAsync(userId);
+            cart = await _cartRepository
+                .CreateCartAsync(userId);
         }
 
 
-        // Check same product + same variant
-        var existingItem =
-            await _cartRepository
-                .GetExistingCartItemAsync(
-                    userId,
-                    dto.ProductId,
-                    dto.ProductVariantId);
-
+        var existingItem = await _cartRepository
+            .GetExistingCartItemAsync(
+                userId,
+                dto.ProductId,
+                dto.ProductVariantId);
 
         if (existingItem != null)
         {
+
             var newQuantity =
-                existingItem.Quantity +
-                dto.Quantity;
+                existingItem.Quantity + dto.Quantity;
 
 
-            // Check stock
-            if (variant != null &&
-                newQuantity > variant.Stock)
+            if (newQuantity > availableStock)
             {
                 throw new Exception(
-                    "Requested quantity exceeds available stock.");
+                    $"Only {availableStock} items are available for {product.Name}.");
             }
 
+            existingItem.Quantity = newQuantity;
 
-            existingItem.Quantity =
-                newQuantity;
+            _cartRepository.UpdateCartItem(existingItem);
 
-            _cartRepository.UpdateCartItem(
-                existingItem);
-
-            await _cartRepository
-                .SaveChangesAsync();
+            await _cartRepository.SaveChangesAsync();
 
             return MapToDto(existingItem);
         }
 
+        // Validate quantity for a new cart item
+
+        if (dto.Quantity > availableStock)
+        {
+            throw new Exception(
+                $"Only {availableStock} items are available for {product.Name}.");
+        }
 
         // Create new cart item
+
         var cartItem = new CartItem
         {
             CartId = cart.Id,
-
-            ProductId =
-                dto.ProductId,
-
-            ProductVariantId =
-                dto.ProductVariantId,
-
-            Quantity =
-                dto.Quantity
+            ProductId = dto.ProductId,
+            ProductVariantId = dto.ProductVariantId,
+            Quantity = dto.Quantity
         };
 
+        await _cartRepository.AddCartItemAsync(cartItem);
 
-        await _cartRepository
-            .AddCartItemAsync(cartItem);
+        await _cartRepository.SaveChangesAsync();
 
-        await _cartRepository
-            .SaveChangesAsync();
+        // Reload complete cart item
 
-
-        // Get complete item with Product
-        // and ProductVariant
-        var createdItem =
-            await _cartRepository
-                .GetCartItemAsync(
-                    userId,
-                    cartItem.Id);
+        var createdItem = await _cartRepository
+            .GetCartItemAsync(userId, cartItem.Id);
 
         if (createdItem == null)
         {
@@ -209,32 +179,28 @@ public class CartService : ICartService
                 "Failed to create cart item.");
         }
 
-
         return MapToDto(createdItem);
     }
 
-
     // UPDATE QUANTITY
 
-    public async Task<CartItemDto?>
-        UpdateQuantityAsync(
-            int userId,
-            int cartItemId,
-            UpdateCartItemDto dto)
+    public async Task<CartItemDto?> UpdateQuantityAsync(
+        int userId,
+        int cartItemId,
+        UpdateCartItemDto dto)
     {
+        // Validate quantity
+
         if (dto.Quantity <= 0)
         {
             throw new Exception(
                 "Quantity must be greater than zero.");
         }
 
+        // Get cart item with product and variant
 
-        var item =
-            await _cartRepository
-                .GetCartItemAsync(
-                    userId,
-                    cartItemId);
-
+        var item = await _cartRepository
+            .GetCartItemAsync(userId, cartItemId);
 
         if (item == null)
         {
@@ -242,125 +208,91 @@ public class CartService : ICartService
         }
 
 
-        // Check variant stock
-        if (item.ProductVariant != null)
+        var availableStock = item.ProductVariant != null
+            ? item.ProductVariant.Stock
+            : item.Product.Stock;
+
+
+        if (dto.Quantity > availableStock)
         {
-            if (dto.Quantity >
-                item.ProductVariant.Stock)
-            {
-                throw new Exception(
-                    "Requested quantity exceeds available stock.");
-            }
+            throw new Exception(
+                $"Only {availableStock} items are available for {item.Product.Name}.");
         }
 
+        // Update quantity
 
-        item.Quantity =
-            dto.Quantity;
+        item.Quantity = dto.Quantity;
 
+        _cartRepository.UpdateCartItem(item);
 
-        _cartRepository.UpdateCartItem(
-            item);
-
-        await _cartRepository
-            .SaveChangesAsync();
-
+        await _cartRepository.SaveChangesAsync();
 
         return MapToDto(item);
     }
 
-
     // REMOVE ITEM
 
-    public async Task<bool>
-        RemoveFromCartAsync(
-            int userId,
-            int cartItemId)
+    public async Task<bool> RemoveFromCartAsync(
+        int userId,
+        int cartItemId)
     {
-        var item =
-            await _cartRepository
-                .GetCartItemAsync(
-                    userId,
-                    cartItemId);
-
+        var item = await _cartRepository
+            .GetCartItemAsync(userId, cartItemId);
 
         if (item == null)
         {
             return false;
         }
 
+        _cartRepository.RemoveCartItem(item);
 
-        _cartRepository.RemoveCartItem(
-            item);
-
-        await _cartRepository
-            .SaveChangesAsync();
-
+        await _cartRepository.SaveChangesAsync();
 
         return true;
     }
 
-
     // CLEAR CART
 
-    public async Task ClearCartAsync(
-        int userId)
+    public async Task ClearCartAsync(int userId)
     {
-        var cart =
-            await _cartRepository
-                .GetCartAsync(userId);
-
+        var cart = await _cartRepository
+            .GetCartAsync(userId);
 
         if (cart == null)
         {
             return;
         }
 
+        _cartRepository.RemoveCartItems(cart.Items);
 
-        _cartRepository.RemoveCartItems(
-            cart.Items);
-
-        await _cartRepository
-            .SaveChangesAsync();
+        await _cartRepository.SaveChangesAsync();
     }
 
+    // MAP ENTITY TO DTO
 
-    // MAP ENTITY → DTO
-
-    private static CartItemDto MapToDto(
-        CartItem item)
+    private static CartItemDto MapToDto(CartItem item)
     {
         return new CartItemDto
         {
             Id = item.Id,
 
-            ProductId =
-                item.ProductId,
+            ProductId = item.ProductId,
 
-            ProductVariantId =
-                item.ProductVariantId,
+            ProductVariantId = item.ProductVariantId,
 
-            ProductName =
-                item.Product.Name,
+            ProductName = item.Product.Name,
 
-            Price =
-                item.Product.Price,
+            Price = item.Product.Price,
 
-            ImageUrl =
-                item.Product.ImageUrl
-                ?? string.Empty,
+            ImageUrl = item.Product.ImageUrl ?? string.Empty,
 
-            AgeGroup =
-                item.ProductVariant?.AgeGroup,
+            AgeGroup = item.ProductVariant?.AgeGroup,
 
-            Size =
-                item.ProductVariant?.Size,
+            Size = item.ProductVariant?.Size,
 
-            Quantity =
-                item.Quantity,
+            Quantity = item.Quantity,
 
-            TotalPrice =
-                item.Product.Price *
-                item.Quantity
+            TotalPrice = item.Product.Price * item.Quantity
         };
     }
 }

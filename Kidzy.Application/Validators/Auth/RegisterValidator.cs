@@ -18,7 +18,9 @@ public class RegisterValidator : AbstractValidator<RegisterDto>
             .NotEmpty()
             .WithMessage("Email is required.")
             .Must(BeValidEmail)
-            .WithMessage("Enter a valid email address.")
+            .WithMessage(
+                "Enter a valid email address. Email must start with a letter."
+            )
             .MaximumLength(150)
             .WithMessage("Email cannot exceed 150 characters.");
 
@@ -26,7 +28,9 @@ public class RegisterValidator : AbstractValidator<RegisterDto>
             .NotEmpty()
             .WithMessage("Password is required.")
             .MinimumLength(8)
-            .WithMessage("Password must contain at least 8 characters.");
+            .WithMessage(
+                "Password must contain at least 8 characters."
+            );
     }
 
     private static bool BeValidEmail(string email)
@@ -36,7 +40,7 @@ public class RegisterValidator : AbstractValidator<RegisterDto>
 
         return Regex.IsMatch(
             email,
-            @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+            @"^[a-zA-Z][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         );
     }
 }

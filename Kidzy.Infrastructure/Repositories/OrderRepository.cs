@@ -1,6 +1,8 @@
 ﻿using Kidzy.Application.Interfaces.Repositories;
+
 using Kidzy.Domain.Entities;
 using Kidzy.Domain.Enums;
+
 using Kidzy.Infrastructure.Data;
 
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +12,8 @@ namespace Kidzy.Infrastructure.Repositories;
 public class OrderRepository
     : IOrderRepository
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ApplicationDbContext
+        _context;
 
 
     public OrderRepository(
@@ -20,28 +23,52 @@ public class OrderRepository
     }
 
 
-    // GET ONE ORDER
+    // CART
 
-    public async Task<Order?>
-        GetOrderByIdAsync(
-            int orderId)
+    public async Task<Cart?>
+        GetCartAsync(
+            int userId)
     {
-        return await _context.Orders
+        return await _context.Carts
 
-            .Include(o => o.User)
+            .Include(
+                x => x.Items)
 
-            .Include(o => o.Items)
-                .ThenInclude(i => i.Product)
+                .ThenInclude(
+                    x => x.Product)
 
-            .Include(o => o.Items)
-                .ThenInclude(i => i.ProductVariant)
+            .Include(
+                x => x.Items)
+
+                .ThenInclude(
+                    x => x.ProductVariant)
 
             .FirstOrDefaultAsync(
-                o => o.Id == orderId);
+                x =>
+                    x.UserId ==
+                    userId);
     }
 
 
-    // GET USER ORDERS
+    // PRODUCT + VARIANTS
+
+    public async Task<Product?>
+        GetProductWithVariantsAsync(
+            int productId)
+    {
+        return await _context.Products
+
+            .Include(
+                x => x.Variants)
+
+            .FirstOrDefaultAsync(
+                x =>
+                    x.Id ==
+                    productId);
+    }
+
+
+    // USER ORDERS
 
     public async Task<List<Order>>
         GetUserOrdersAsync(
@@ -49,69 +76,119 @@ public class OrderRepository
     {
         return await _context.Orders
 
-            .Include(o => o.Items)
-                .ThenInclude(i => i.Product)
+            .Include(
+                x => x.User)
 
-            .Include(o => o.Items)
-                .ThenInclude(i => i.ProductVariant)
+            .Include(
+                x => x.Payment)
 
-            .Where(o =>
-                o.UserId == userId)
+            .Include(
+                x => x.Items)
+
+                .ThenInclude(
+                    x => x.Product)
+
+            .Include(
+                x => x.Items)
+
+                .ThenInclude(
+                    x => x.ProductVariant)
+
+            .Where(
+                x =>
+                    x.UserId ==
+                    userId)
 
             .OrderByDescending(
-                o => o.CreatedAt)
-
-            .AsNoTracking()
+                x =>
+                    x.CreatedAt)
 
             .ToListAsync();
     }
 
 
-    // GET ALL ORDERS
-    // ADMIN
-   
+    // ONE ORDER
+
+    public async Task<Order?>
+        GetOrderByIdAsync(
+            int orderId)
+    {
+        return await _context.Orders
+
+            .Include(
+                x => x.User)
+
+            .Include(
+                x => x.Payment)
+
+            .Include(
+                x => x.Items)
+
+                .ThenInclude(
+                    x => x.Product)
+
+            .Include(
+                x => x.Items)
+
+                .ThenInclude(
+                    x => x.ProductVariant)
+
+            .FirstOrDefaultAsync(
+                x =>
+                    x.Id ==
+                    orderId);
+    }
+
+
+    // ALL ORDERS
 
     public async Task<List<Order>>
         GetAllOrdersAsync(
             OrderStatus? status = null)
     {
-        var query =
+        IQueryable<Order> query =
             _context.Orders
 
-                .Include(o => o.User)
+                .Include(
+                    x => x.User)
 
-                .Include(o => o.Items)
-                    .ThenInclude(i =>
-                        i.Product)
+                .Include(
+                    x => x.Payment)
 
-                .Include(o => o.Items)
-                    .ThenInclude(i =>
-                        i.ProductVariant)
+                .Include(
+                    x => x.Items)
 
-                .AsQueryable();
+                    .ThenInclude(
+                        x => x.Product)
 
+                .Include(
+                    x => x.Items)
 
-        // STATUS FILTER
+                    .ThenInclude(
+                        x => x.ProductVariant);
+
 
         if (status.HasValue)
         {
-            query = query.Where(
-                o => o.Status == status.Value);
+            query =
+                query.Where(
+                    x =>
+                        x.Status ==
+                        status.Value);
         }
 
 
         return await query
 
             .OrderByDescending(
-                o => o.CreatedAt)
-
-            .AsNoTracking()
+                x =>
+                    x.CreatedAt)
 
             .ToListAsync();
     }
 
 
-    // ADD ORDER
+    // ADD
 
     public async Task AddAsync(
         Order order)
@@ -121,19 +198,31 @@ public class OrderRepository
     }
 
 
-    // DELETE ORDER
+    // DELETE
 
     public void Delete(
         Order order)
     {
-        _context.Orders.Remove(order);
+        _context.Orders
+            .Remove(order);
     }
 
 
-    // SAVE CHANGES
+    // CLEAR CART
+
+    public void RemoveCartItems(
+        IEnumerable<CartItem> items)
+    {
+        _context.CartItems
+            .RemoveRange(items);
+    }
+
+
+    // SAVE
 
     public async Task SaveChangesAsync()
     {
-        await _context.SaveChangesAsync();
+        await _context
+            .SaveChangesAsync();
     }
 }

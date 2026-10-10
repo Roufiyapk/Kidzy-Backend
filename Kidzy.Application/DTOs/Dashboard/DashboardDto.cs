@@ -26,4 +26,9 @@ public class DashboardDto
     public int Delivered { get; set; }
 
     public int Cancelled { get; set; }
+    public List<MonthlyRevenueDto> MonthlyRevenue { get; set; }
+    = new();
+
+    public List<MonthlyOrderDto> MonthlyOrders { get; set; }
+        = new();
 }

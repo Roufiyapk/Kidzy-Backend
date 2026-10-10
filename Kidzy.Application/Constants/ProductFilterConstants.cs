@@ -7,10 +7,9 @@ public static class ProductFilterConstants
     public static readonly string[] Ages =
     {
         "0–2 Years",
-        "2–4 Years",
-        "4–6 Years",
-        "6–8 Years",
-        "8–10 Years"
+        "2–6 Years",
+        "6-10 Years"
+       
     };
 
 
@@ -42,4 +41,11 @@ public static class ProductFilterConstants
         "PriceLowToHigh",
         "PriceHighToLow"
     };
+
+    public static readonly string[] StockStatuses =
+{
+    "InStock",
+    "LowStock",
+    "OutOfStock"
+};
 }

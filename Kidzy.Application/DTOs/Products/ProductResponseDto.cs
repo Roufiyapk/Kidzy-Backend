@@ -14,18 +14,22 @@ public class ProductResponseDto
 
     public string ImageUrl { get; set; } = string.Empty;
 
+    public List<string> Images { get; set; } = new();
+
     public bool BestSeller { get; set; }
 
     public bool NewArrival { get; set; }
 
+    public string? Gender { get; set; }
+
+    public bool Deleted { get; set; }
+
     public int CategoryId { get; set; }
 
-    public string CategoryName { get; set; }
-        = string.Empty;
+    public string CategoryName { get; set; } = string.Empty;
 
-    public string SubCategory { get; set; }
-        = string.Empty;
+    public int? SubCategoryId { get; set; }
+    public string SubCategory { get; set; } = string.Empty;
 
-    public List<ProductVariantDto> Variants { get; set; }
-        = new();
+    public List<ProductVariantDto> Variants { get; set; } = new();
 }
