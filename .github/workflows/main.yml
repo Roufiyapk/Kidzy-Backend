@@ -1,5 +1,4 @@
-name: Kidzy Backend CI/CD
-
+name: Kidzy Backend CI/CD Pipeline
 on:
   push:
     branches:
