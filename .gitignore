@@ -1,20 +1,52 @@
+# Visual Studio
 .vs/
-.vscode/
+*.user
+*.suo
+
+# Build output
 bin/
 obj/
+
+# User-specific files
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# .NET
+*.dll
+*.exe
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# User secrets
+secrets.json
+*.secrets.json
+
+# Local configuration
+appsettings.Local.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+coverage/
+
+# Node
 node_modules/
 dist/
 build/
-.env
-.env.*
-secrets.json
-*.secrets.json
-appsettings.Local.json
-*.user
-*.suo
-*.log
-*.db
-*.sqlite
-coverage/
-.DS_Store
-Thumbs.db
