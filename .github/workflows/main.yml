@@ -1,4 +1,5 @@
 name: Kidzy Backend CI/CD Pipeline
+
 on:
   push:
     branches:
@@ -19,11 +20,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Get source code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,12 +30,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      # 3. Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 4. Build and push Docker image
       - name: Build and push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -50,33 +47,61 @@ jobs:
           docker push \
             $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 5. Deploy to EC2
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          script: |
-            set -e
+      - name: Deploy to EC2 using SSM
+        env:
+          AWS_REGION: ap-south-1
+          INSTANCE_ID: i-0feaf09bfa8dd0bd0
+        run: |
+          set -e
 
-            aws ecr get-login-password --region ap-south-1 \
-              | sudo docker login \
-                --username AWS \
-                --password-stdin \
-                428270342093.dkr.ecr.ap-south-1.amazonaws.com
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "set -e",
+              "aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin 428270342093.dkr.ecr.ap-south-1.amazonaws.com",
+              "sudo docker pull 428270342093.dkr.ecr.ap-south-1.amazonaws.com/kidzy-backend:latest",
+              "sudo docker stop kidzy-backend || true",
+              "sudo docker rm kidzy-backend || true",
+              "sudo docker run -d --name kidzy-backend --restart unless-stopped --env-file /home/ubuntu/kidzy-env-final.txt -p 8080:8080 428270342093.dkr.ecr.ap-south-1.amazonaws.com/kidzy-backend:latest",
+              "sudo docker image prune -f"
+            ]' \
+            --query 'Command.CommandId' \
+            --output text)
 
-            sudo docker pull \
-              428270342093.dkr.ecr.ap-south-1.amazonaws.com/kidzy-backend:latest
+          echo "SSM Command ID: $COMMAND_ID"
 
-            sudo docker stop kidzy-backend || true
-            sudo docker rm kidzy-backend || true
+          for i in $(seq 1 30); do
+            STATUS=$(aws ssm get-command-invocation \
+              --region "$AWS_REGION" \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query 'Status' \
+              --output text 2>/dev/null || echo "Pending")
 
-            sudo docker run -d \
-              --name kidzy-backend \
-              --restart unless-stopped \
-              --env-file /home/ubuntu/kidzy-env-final.txt \
-              -p 8080:8080 \
-              428270342093.dkr.ecr.ap-south-1.amazonaws.com/kidzy-backend:latest
+            echo "Deployment status: $STATUS"
 
-            sudo docker image prune -f
+            if [ "$STATUS" = "Success" ]; then
+              exit 0
+            fi
+
+            if [ "$STATUS" = "Failed" ] || \
+               [ "$STATUS" = "Cancelled" ] || \
+               [ "$STATUS" = "TimedOut" ]; then
+
+              aws ssm get-command-invocation \
+                --region "$AWS_REGION" \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'StandardErrorContent' \
+                --output text
+
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          echo "Deployment timed out. Check Systems Manager for details."
+          exit 1
